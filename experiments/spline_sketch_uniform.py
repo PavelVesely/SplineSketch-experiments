@@ -1,1 +1,0 @@
-../spline_sketch_uniform.py

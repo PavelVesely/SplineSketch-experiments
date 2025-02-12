@@ -35,7 +35,7 @@ data_sources = [(normal, "normal"),
 sketch_sizes = [15,20,25,32,50,75,100,125,150,175,200,250]
 MomentSketch_ks = [7,9,11,13,15,19,23,27,33,39,45,51,57]
 KLL_ks = [8,24,42,52,62,72,82,92,102,112,122,132] # KLL size is also influenced by log(N) in the DataSketches implementation
-input_sizes_log10 = [8] 
+input_sizes_log10 = [5] 
 NUM_QUERIES = 10000
 sketch_functions = [#(run_splineSketchUniform, "SplineSketch(Py)"),
                     (run_splinesketch_java, "SplineSketch"),
@@ -210,7 +210,7 @@ if __name__ == "__main__":
                 ax_avg.plot(actual_sketch_sizes[run_function.__name__], average_errors[run_function.__name__], label=f"{sketch_name}")
                 ax_max.plot(actual_sketch_sizes[run_function.__name__], max_errors[run_function.__name__], label=f"{sketch_name}")
                 ax_utm.plot(actual_sketch_sizes[run_function.__name__], update_times[run_function.__name__], label=f"{sketch_name}")
-                ax_qtm.plot(actual_sketch_sizes[run_function.__name__], query_times[run_function.__name__], label=f"{sketch_name}") - 8)) / max_errors["run_splinesketch_java"][i] if max_errors["run_splinesketch_java"][i] != 0 else 100 for i in range(len(actual_sketch_sizes["run_splinesketch_java"]))], label=f"(n / k) / splineSketch err.")
+                ax_qtm.plot(actual_sketch_sizes[run_function.__name__], query_times[run_function.__name__], label=f"{sketch_name}")
 
             ax_avg.set_yscale('log')
             ax_avg.grid(True)
