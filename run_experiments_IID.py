@@ -15,7 +15,7 @@ import csv
 
 ########################## PARAMETERS OF EXPERIMENTS ######################3
 
-NUM_PARALLEL_JOBS = 4 # number of jobs run in parallel
+NUM_PARALLEL_JOBS = 3 # number of jobs run in parallel
 
 data_sources = [(normal, "normal"),
                 (uniform, "uniform"),
@@ -25,9 +25,9 @@ data_sources = [(normal, "normal"),
                 (signed_lognormal, "signed_lognormal"),
                 (signed_loguniform, "signed_loguniform"),
                 (signed_loguniform_extreme, "signed_loguniform_extreme"),
-                # (distinct_values_42, "distinct_values_42"),
-                # (distinct_values_5, "distinct_values_5"),
-                # (distinct_values_150, "distinct_values_150"),
+                (distinct_values_42, "distinct_values_42"),
+                (distinct_values_5, "distinct_values_5"),
+                (distinct_values_150, "distinct_values_150"),
                 (normal_with_1_large_change, "normal_with_1_large_change"),
                 (normal_with_1_small_change, "normal_with_1_small_change"),
                 (normal_and_distinct_42, "normal_and_distinct_42"),
@@ -35,7 +35,7 @@ data_sources = [(normal, "normal"),
 sketch_sizes = [15,20,25,32,50,75,100,125,150,175,200,250]
 MomentSketch_ks = [7,9,11,13,15,19,23,27,33,39,45,51,57]
 KLL_ks = [8,24,42,52,62,72,82,92,102,112,122,132] # KLL size is also influenced by log(N) in the DataSketches implementation
-input_sizes_log10 = [5] 
+input_sizes_log10 = [8]
 NUM_QUERIES = 10000
 sketch_functions = [#(run_splineSketchUniform, "SplineSketch(Py)"),
                     (run_splinesketch_java, "SplineSketch"),
@@ -177,7 +177,6 @@ if __name__ == "__main__":
                 fig_re, ax_re = plt.subplots()
                 ax_re.set_xlabel('true rank')
                 ax_re.set_ylabel('error')
-                #ax_re.set_yscale('log') # using default linear scale here as it doesn't look very good with log scale
                 fig_re.tight_layout()
 
                 for run_function, sketch_name in sketch_functions:
@@ -193,7 +192,7 @@ if __name__ == "__main__":
                     
                     actual_sketch_sizes[run_function.__name__].append(actual_sketch_size)
 
-                    # ax_re.plot(true_values, errors, label=f"{sketch_name}, size {actual_sketch_size}")
+                    ax_re.plot(true_values, errors, label=f"{sketch_name}, size {actual_sketch_size}")
 
 
                 #fig_re.savefig(plots_dir+f"{data_name}_logN={logN}_size={sketch_size}_nolegend.pdf", format='pdf')
