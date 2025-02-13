@@ -20,6 +20,4 @@ All of these Python programs produce a set of plots with results into `plots/` d
 
 - [HEPMASS dataset](https://archive.ics.uci.edu/dataset/347/hepmass) from UC Irvine ML Repository: download `all_train.csv.gz` and `all_test.csv.gz` and decompress both files into `datasets/hepmass/`
 - [Power dataset](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) from UC Irvine ML Repository: download into `datasets/household_power_consumption/household_power_consumption.txt`
-
-
-- 
+- Books dataset from [SOSD](https://github.com/learnedsystems/SOSD) (a benchmark for learned indexes): download using `download_books_dataset.sh`.
