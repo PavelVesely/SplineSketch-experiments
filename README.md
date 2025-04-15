@@ -1,10 +1,6 @@
 # SplineSketch: a new quantile sketch with uniform error guarantees and high accuracy in practice
 
-[https://arxiv.org/abs/2504.01206](New paper at arXiv!)
-
 Here, we provide its prototype implementation [in Python](spline_sketch_uniform.py) and [in Java](SplineSketch.java), and an experimental pipeline for evaluating its accuracy on synthetic and real-world datasets and also its update and query times, in comparison with [t-digest](https://github.com/tdunning/t-digest), [KLL](https://datasketches.apache.org/docs/KLL/KLLSketch.html), and [MomentSketch](https://github.com/stanford-futuredata/msketch).
-
-Note: The SplineSketch implementation is intended to perform accuracy and running time experiments; it is thus to some extent under development and may change. A SplineSketch version that is suitable for usage will appear later in a different repository.
 
 ## Running experiments
 
