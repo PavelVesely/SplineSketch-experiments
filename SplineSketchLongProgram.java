@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Random;
 
-public class SplineSketchProgram {
+public class SplineSketchLongProgram {
 
     public static void main(String[] args) {
         if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java SplineSketchProgram <dataset_file> <query_file> <sketch_size> <output_file> <num_parts (optional)>");
+            System.out.println("Usage: java SplineSketchLongProgram <dataset_file> <query_file> <sketch_size> <output_file> <num_parts (optional)>");
             return;
         }
 
@@ -26,24 +26,24 @@ public class SplineSketchProgram {
 
         try {
             ////////////// load data and queries /////////////////
-            List<Double> data = new ArrayList<>();
+            List<Long> data = new ArrayList<>();
             // Read the dataset file and add numbers to the SplineSketch
             try (BufferedReader datasetReader = new BufferedReader(new FileReader(datasetFile))) {
                 String line;
                 while ((line = datasetReader.readLine()) != null) {
-                    double value = Double.parseDouble(line);
+                    long value = (long)Double.parseDouble(line);
                     data.add(value);
                 }
             }
             int n = data.size();
             // Read the query file and query the SplineSketch using the cdf method
-            List<Double> queries = new ArrayList<>();
+            List<Long> queries = new ArrayList<>();
 
             try (BufferedReader br = new BufferedReader(new FileReader(queryFile))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     try {
-                        double value = Double.parseDouble(line);
+                        long value = (long)Double.parseDouble(line);
                         queries.add(value);
                     } catch (NumberFormatException e) {
                         System.err.println("Skipping invalid float value: " + line);
@@ -54,22 +54,22 @@ public class SplineSketchProgram {
             }
 
             long startTime, afterUpdatesTime, afterQueriesTime;
-            SplineSketch splineSketch;
+            SplineSketchLong splineSketch;
             if (num_parts == 1) { // streaming
             
                 ////////////// measure time from here /////////////////
                 startTime = System.nanoTime();
 
-                // Create a SplineSketch with the given size
-                splineSketch = new SplineSketch(sketch_size, "");
+                // Create a SplineSketchLong with the given size
+                splineSketch = new SplineSketchLong(sketch_size, "");
                 for (int i = 0; i < data.size(); i++) {
                     splineSketch.update(data.get(i));
                 }
             } else {
                 int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
-                SplineSketch[] splineSketches = new SplineSketch[num_parts];
+                SplineSketchLong[] splineSketches = new SplineSketchLong[num_parts];
                 for (int j = 0; j < num_parts; j++) {
-                    splineSketches[j] = new SplineSketch(sketch_size, "");
+                    splineSketches[j] = new SplineSketchLong(sketch_size, "");
                 }
                 // create individual sketches
                 int j = 0;
@@ -82,7 +82,7 @@ public class SplineSketchProgram {
                 // merging
                 for (int step = 1; step < num_parts; step *= 2) {
                     for (j = 0; j < num_parts - step; j += 2*step) {
-                        splineSketches[j] = SplineSketch.merge(splineSketches[j], splineSketches[j+step]);
+                        splineSketches[j] = SplineSketchLong.merge(splineSketches[j], splineSketches[j+step]);
                         splineSketches[j+step] = null;
                     }
                 }

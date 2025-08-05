@@ -7,15 +7,9 @@ import java.util.Arrays;
 import java.util.Set;
 
 /**
- * A Java translation of the SplineSketch Python code.
- * This includes:
- *  1) equallySpacedSelection
- *  2) mergeArrayIntoBuckets
- *  3) a SplineSketch class with similar logic
- *
- * Includes the PCHIP interpolation as a translation of scipy's PCHIP into Java.
+ * A version for ablation study
  */
-public class SplineSketch {
+public class SplineSketchAdjustable {
 
     // =============================================================
     // === Static functions
@@ -27,7 +21,10 @@ public class SplineSketch {
      *
      * @param lst Sorted list of doubles.
      * @param k   Number of points to select.
-     * @return ...TODO
+     * @return A List<Bucket> of length k, where each Bucket has:
+     *         - threshold: the chosen boundary
+     *         - count: 0  (since we haven't assigned counts yet)
+     *         - isProtected: false
      */
     private static ArrayList<Object> equallySpacedSelection(double[] lst, int n, int k) {
 
@@ -76,6 +73,7 @@ public class SplineSketch {
             while (j2 < n && lst[j2] <= thresholds[idx]) {
                 j2++;
             }
+            //result.add(new Bucket(thresholds.get(idx), j2 - prevJ, false));
             counters[idx] = j2 - prevJ;
             isProtected[idx] = false;
             prevJ = j2;
@@ -109,7 +107,7 @@ public class SplineSketch {
     }
 
     // =============================================================
-    // === The main SplineSketch class fields and methods
+    // === The main SplineSketchAdjustable class fields and methods
     // =============================================================
 
     private int k; // number of buckets
@@ -142,14 +140,20 @@ public class SplineSketch {
     private double defaultBucketBoundMult;
     private double bucketBoundMult;
 
+    private int heuristicErrorType; // 1 = pdf (counters, or 1st der of CDF), 2 = 2nd der of CDF, 
+    private int interpolationDegree; // only 1, 3 allowed
+
     /**
-     * Constructs the SplineSketch with a specified number of buckets k.
+     * Constructs the SplineSketchAdjustable with a specified number of buckets k.
      */
-    public SplineSketch(int k, String printInfo) {
+    public SplineSketchAdjustable(int k, int heuristicErrorType, int interpolationDegree, double splitJoinRatio, double minRelativeBucketLength, double minFracBucketBoundToSplit, double epochIncrFactor, double defaultBucketBoundMult, String printInfo) {
         if (k < 4) {
             throw new IllegalArgumentException("k must be >= 4");
         }
         this.k = k;
+        this.heuristicErrorType = heuristicErrorType;
+        this.interpolationDegree = interpolationDegree;
+
         this.thresholds = null; // new double[k];
         this.counters = null; // new int[k];
         this.isProtected = null; // new boolean[k];
@@ -165,22 +169,15 @@ public class SplineSketch {
         this.printInfo = printInfo;
 
         // Constants (matching the Python code)
-        this.splitJoinRatio = 1.5;
-        this.minRelativeBucketLength = 1e-8;
+        this.splitJoinRatio = splitJoinRatio; //1.5;
+        this.minRelativeBucketLength = minRelativeBucketLength; //1e-8;
         this.minAbsoluteNonzeroValue = Double.POSITIVE_INFINITY;
-        this.minFracBucketBoundToSplit = 0.01;
+        this.minFracBucketBoundToSplit = minFracBucketBoundToSplit; //0.01;
 
-        this.epochIncrFactor = 1.25;
+        this.epochIncrFactor = epochIncrFactor; //1.25;
         this.epochEnd = 2L * this.bufferSizeBound;
-        this.defaultBucketBoundMult = 3.0;
-        this.bucketBoundMult = this.defaultBucketBoundMult;
-    }
-
-    /**
-     * A convenience constructor when no debug info is needed.
-     */
-    public SplineSketch(int k) {
-        this(k, "");
+        this.defaultBucketBoundMult = defaultBucketBoundMult; //3.0;
+        this.bucketBoundMult = 3.0;
     }
 
     /**
@@ -257,7 +254,6 @@ public class SplineSketch {
             this.bufferIndex = 0;
             return;
         }
-        assert this.thresholds.length > 0;
 
         // Possibly end an epoch => un-protect all buckets
         if ((long) n >= epochEnd) {
@@ -268,7 +264,7 @@ public class SplineSketch {
             bucketBoundMult = defaultBucketBoundMult;
         }
 
-        
+        // Create a copy of the bucket thresholds
         int currNumThresholds = thresholds.length; // needed for merging or resizing
         int prefSum = 0;
         assert oldThresholds.length == currNumThresholds : "old len = " + oldThresholds.length + ", new " + currNumThresholds; // TODO: remove
@@ -278,6 +274,7 @@ public class SplineSketch {
             prefSums[i] = prefSum;
             // System.out.printf("thr %f, cntr %d, prefSum %d, isProt %s %n", thresholds[i], counters[i], prefSum, String.valueOf(isProtected[i]));
         }
+        PchipLikeInterpolator interpolatorOld = calcSpline(oldThresholds, counters, this.interpolationDegree);
 
         // Merge buffer into that copy
         mergeArrayIntoBuckets(buffer, this.bufferIndex, thresholds, counters);
@@ -373,11 +370,11 @@ public class SplineSketch {
                 // We cannot do anything => increase bucketBoundMult
                 bucketBoundMult *= 2.0;
                 boundVal *= 2.0;
+                System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
+                        + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
+                        + ", epoch end=" + epochEnd + ", k=" + k
+                        + " (info: " + printInfo + ")"); // iter=" + iter + ", 
                 if (bucketBoundMult > 100) {
-                    System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
-                            + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
-                            + ", epoch end=" + epochEnd + ", k=" + k
-                            + " (info: " + printInfo + ")"); // iter=" + iter + ", 
                     System.err.println("!!!!! RESETTING EPOCH !!!!"); // iter=" + iter + ", 
                     for (int i = 0; i < currNumThresholds; i++) {
                         isProtected[i] = false;
@@ -504,11 +501,6 @@ public class SplineSketch {
             int prevVal = 0;
             int indOld = 0;
             currNumThresholds = iB;
-            if (thresholds.length != currNumThresholds) {
-                thresholds = new double[currNumThresholds];
-                counters = new int[currNumThresholds];
-                isProtected = new boolean[currNumThresholds];
-            }
             for (int i = 0; i < currNumThresholds; i++) {
                 double x = newBoundaries[i];
                 thresholds[i] = x;
@@ -518,7 +510,7 @@ public class SplineSketch {
                 if (oldThresholds[indOld] <= x) {
                     currCDF = prefSums[indOld];
                 } else {
-                    currCDF = PchipInterpolator.EvalPCHIPatBucket(indOld, x, oldThresholds, prefSums);
+                    currCDF = interpolatorOld.valueAt(x); //PchipInterpolator.EvalPCHIPatBucket(indOld, x, oldThresholds, prefSums);
                 }
                 // int currCDF = interpolator.valueAt(x);
                 int cnt = currCDF - prevVal;
@@ -579,12 +571,12 @@ public class SplineSketch {
             if (Math.abs(this.k - newK) > 0.25 * this.k) {
                 this.epochEnd = 0;
             }
-            /* update buffer bounds and all aux arrays */
-            ensureBufferCapacity(bufferIndex);           // keep current data
-            ensureAuxArraysSize(Math.max(this.k, newK));
             this.k = newK;
-            this.bufferSizeBound = 5 * this.k;
 
+            /* update buffer bounds and all aux arrays */
+            this.bufferSizeBound = 5 * this.k;
+            ensureBufferCapacity(bufferIndex);           // keep current data
+            ensureAuxArraysSize(this.k);
 
             consolidate();                               // bring sketch to size k
         }
@@ -595,7 +587,7 @@ public class SplineSketch {
      * the combined data (the larger one is reused, the smaller one
      * becomes garbage-collectable).
      */
-    public static SplineSketch merge(SplineSketch a, SplineSketch b) {
+    public static SplineSketchAdjustable merge(SplineSketchAdjustable a, SplineSketchAdjustable b) {
         if (a.n >= b.n) {
             a.mergeIntoSelf(b);
             return a;
@@ -610,7 +602,7 @@ public class SplineSketch {
     * ------------------------------------------------------------------*/
 
     /** Internal: merge <code>other</code> into <code>this</code>. */
-    private void mergeIntoSelf(SplineSketch other) {
+    private void mergeIntoSelf(SplineSketchAdjustable other) {
         /* --- PREP: splines over *current* buckets (buffers stay as buffers) --- */
         PchipLikeInterpolator splThis  = this.calcSpline();
         PchipLikeInterpolator splOther = other.calcSpline();
@@ -628,13 +620,9 @@ public class SplineSketch {
         this.bufferIndex += other.bufferIndex;
 
         /* --- UNION of bucket boundaries --------------------------------------- */
-        ArrayList<Double> unionThrs = new ArrayList<>();
-        ArrayList<Integer> unionCntrs = new ArrayList<>();
-        ArrayList<Boolean> unionProt = new ArrayList<>();
+        ArrayList<Bucket> union = new ArrayList<>();
         int i = 0, j = 0;
         int prevSum = 0;
-        double lastT = Double.MIN_VALUE;
-        boolean prot = false;
 
         while (i < (this.thresholds == null ? 0 : this.thresholds.length) ||
             j < (other.thresholds == null ? 0 : other.thresholds.length)) {
@@ -644,35 +632,31 @@ public class SplineSketch {
                                     this.thresholds[i] <= other.thresholds[j]);
 
             double t;
+            boolean prot;
             if (takeFromThis) {
                 t    = this.thresholds[i];
-                prot |= this.isProtected[i];
+                prot = this.isProtected[i];
                 i++;
             } else {
                 t    = other.thresholds[j];
-                // protection reset for thresholds coming from “other” -- so no change of prot
+                prot = false;          // protection reset for thresholds coming from “other”
                 j++;
             }
-            // definitely add the first one and the last one
-            if (i + j == 1
-                     || i + j == this.thresholds.length + other.thresholds.length - 1
-                    //  || areSufficientlyDifferent(t, lastT)
-                    || Math.abs(t - lastT) > minRelativeBucketLength * Math.max(Math.max(Math.abs(t), Math.abs(lastT)), minAbsoluteNonzeroValue)) {
-                int newSum = splThis.valueAt(t) + splOther.valueAt(t);
-                //union.add(new Bucket(t, newSum - prevSum, prot));
-                unionThrs.add(t);
-                unionCntrs.add(newSum - prevSum);
-                unionProt.add(prot);
-                // System.out.printf("thr %f, cntr=%d, prot=%s%n", t, newSum - prevSum, String.valueOf(prot));
-                prevSum = newSum;
-                lastT = t;
-                prot = false;
-            }
+
+            int newSum = splThis.valueAt(t) + splOther.valueAt(t);
+            union.add(new Bucket(t, newSum - prevSum, prot));
+            //System.out.printf("thr %f, cntr=%d, prot=%s%n", t, newSum - prevSum, String.valueOf(prot));
+            prevSum = newSum;
         }
         assert prevSum + bufferIndex == this.n;
 
+        /* The helper collapses boundaries that are too close. */
+        // System.out.printf("before pruning: num thrs=%d%n", union.size());
+        union = pruneTooCloseThresholds(union);
+        // System.out.printf("after pruning: num thrs=%d%n", union.size());
+
         /* --- copy back into the receiving sketch ------------------------------ */
-        int m = unionThrs.size();
+        int m = union.size();
         ensureAuxArraysSize(Math.max(m, this.k));   // consolidate() may need ≥k slots
         if (m > 0) {
             this.thresholds  = new double[m];
@@ -680,9 +664,10 @@ public class SplineSketch {
             this.isProtected = new boolean[m];
 
             for (int idx = 0; idx < m; idx++) {
-                this.thresholds[idx]  = unionThrs.get(idx);
-                this.counters[idx]    = unionCntrs.get(idx);
-                this.isProtected[idx] = unionProt.get(idx);
+                Bucket bkt       = union.get(idx);
+                this.thresholds[idx]  = bkt.t;
+                this.counters[idx]    = bkt.cnt;
+                this.isProtected[idx] = bkt.prot;
             }
         }
 
@@ -695,9 +680,64 @@ public class SplineSketch {
     }
 
     /* ------------------------------------------------------------------
+    *                     HELPER DATA STRUCTURES
+    * ------------------------------------------------------------------*/
+
+    /** Tiny record for one bucket while merging. */
+    private static final class Bucket {
+        final double t;   // right boundary
+        final int    cnt; // items inside
+        final boolean prot;
+        Bucket(double t, int cnt, boolean prot) {
+            this.t = t;
+            this.cnt = cnt;
+            this.prot = prot;
+        }
+    }
+
+    /* ------------------------------------------------------------------
     *                     HELPER  METHODS
     * ------------------------------------------------------------------*/
 
+    /** Collapse adjacent bucket boundaries that are *not*
+     *  {@link #areSufficientlyDifferent(double, double)}.
+     */
+    private ArrayList<Bucket> pruneTooCloseThresholds(List<Bucket> buckets) {
+        if (buckets.isEmpty()) return new ArrayList<>();
+
+        ArrayList<Bucket> res = new ArrayList<>();
+        Bucket first = buckets.get(0);
+        res.add(new Bucket(first.t, first.cnt, first.prot));
+
+        double lastT  = first.t;
+        int    accCnt = 0;
+        boolean accProt = false;
+
+        for (int k = 1; k < buckets.size() - 1; k++) {
+            Bucket b = buckets.get(k);
+            if (areSufficientlyDifferent(b.t, lastT)) {
+                res.add(new Bucket(b.t, accCnt + b.cnt, accProt | b.prot));
+                lastT   = b.t;
+                accCnt  = 0;
+                accProt = false;
+            } else {
+                accCnt  += b.cnt;
+                accProt |= b.prot;
+            }
+        }
+
+        /* handle the last boundary */
+        Bucket lastB = buckets.get(buckets.size() - 1);
+        if (!areSufficientlyDifferent(lastB.t, lastT) && res.size() > 0) {
+            Bucket prev = res.remove(res.size() - 1);
+            res.add(new Bucket(lastB.t,
+                            prev.cnt + accCnt + lastB.cnt,
+                            prev.prot | accProt | lastB.prot));
+        } else {
+            res.add(new Bucket(lastB.t, accCnt + lastB.cnt, accProt | lastB.prot));
+        }
+        return res;
+    }
 
     /** Ensure the buffer array is large enough (doubling strategy). */
     private void ensureBufferCapacity(int needed) {
@@ -727,7 +767,7 @@ public class SplineSketch {
      * a placeholder that does a simple piecewise-linear approach. (You may
      * replace it with a real monotonic cubic spline if needed.)
      */
-    private static PchipLikeInterpolator calcSpline(double[] thresholds, int[] counters) {
+    private static PchipLikeInterpolator calcSpline(double[] thresholds, int[] counters, int interpolationDegree) {
         if (thresholds == null) {
             return x -> 0;
         }
@@ -738,15 +778,26 @@ public class SplineSketch {
             run += counters[i];
             prefixSums[i] = run;
         }
+        switch (interpolationDegree) {
+            case 1:
+                return new LinearInterpolator(thresholds, prefixSums);
+            case 3:
+                return new PchipInterpolator(thresholds, prefixSums);
+            // case 5:
+            //     return new PchipInterpolator(thresholds, prefixSums);
+            default:
+                throw new Error("unsupported interpolationDegree " + interpolationDegree);
+        }
 
-        return new PchipInterpolator(thresholds, prefixSums);
+
+        
     }
 
     /**
      * Convenience method using current buckets.
      */
     private PchipLikeInterpolator calcSpline() {
-        return calcSpline(this.thresholds, this.counters);
+        return calcSpline(this.thresholds, this.counters, this.interpolationDegree);
     }
 
     /**
@@ -785,6 +836,42 @@ public class SplineSketch {
         return result;
     }
     
+// def get_der3(len, cnt, prevLen, prevCnt, nextLen, nextCnt):
+//             return ((nextCnt/nextLen - cnt/len) / (len + nextLen) - \
+//                     (cnt/len - prevCnt/prevLen) / (len + prevLen)) / \
+//                            (len + prevLen/2 + nextLen/2)
+        
+//         # 4th derivative of CDF = 3rd derivative of pdf
+//         def get_der4(len, cnt, prevLen, prevCnt, nextLen, nextCnt, prevprevLen, prevprevCnt, nextnextLen, nextnextCnt):
+//             center = get_der3(len, cnt, prevLen, prevCnt, nextLen, nextCnt)
+//             next = get_der3(nextLen, nextCnt, len, cnt, nextnextLen, nextnextCnt)
+//             prev = get_der3(prevLen, prevCnt, prevprevLen, prevprevCnt, len, cnt)
+//             return max(abs(next - center) / (len + nextLen + nextnextLen / 2 + prevLen / 2), \
+//                        abs(center - prev) / (len + prevLen + nextLen / 2 + prevprevLen / 2))
+
+    private double getErrorEstimate(double prevLen, int prevCnt, double nextLen, int nextCnt, int cnt, double len) {
+        switch (this.heuristicErrorType) {
+                case -1:
+                    return len;
+                case 0:
+                    return 1;
+                case 1:
+                    return cnt;
+                case 2:
+                    return (len * len) * Math.max(
+                            Math.abs((nextCnt / nextLen) - (cnt / len)) / (len + nextLen),
+                            Math.abs((cnt / len) - (prevCnt / prevLen)) / (len + prevLen)
+                    );
+                case 3:
+                    return  (len * len * len) * Math.abs( Math.abs(nextCnt/nextLen - cnt/len) / (len + nextLen) 
+                                     -  Math.abs(cnt/len - prevCnt/prevLen) / (len + prevLen)) 
+                                / (len + prevLen/2 + nextLen/2);
+                default:
+                    return 0;
+            }
+    }
+
+
     /**
      * Computes the "error estimate" for bucket i, either for splitting or joining.
      */
@@ -805,12 +892,8 @@ public class SplineSketch {
             cnt = nextCnt;
             nextLen = thresholds[i + 1] - thresholds[i];
             nextCnt = counters[i + 1];
+            res[i] = getErrorEstimate(prevLen, prevCnt, nextLen, nextCnt, cnt, len);
 
-            double der2 = Math.max(
-                    Math.abs((nextCnt / nextLen) - (cnt / len)) / (len + nextLen),
-                    Math.abs((cnt / len) - (prevCnt / prevLen)) / (len + prevLen)
-            );
-            res[i] = (len * len) * der2;
         }
         
         prevLen = len;
@@ -819,11 +902,7 @@ public class SplineSketch {
         cnt = nextCnt;
         nextCnt = 0;
 
-        double der2 = Math.max(
-                Math.abs((nextCnt / nextLen) - (cnt / len)) / (len + nextLen),
-                Math.abs((cnt / len) - (prevCnt / prevLen)) / (len + prevLen)
-        );
-        res[thresholds.length - 1] = (len * len) * der2;
+        res[thresholds.length - 1] = getErrorEstimate(prevLen, prevCnt, nextLen, nextCnt, cnt, len);
         return res;
     }
 
@@ -858,7 +937,7 @@ public class SplineSketch {
                     Math.abs((nextNextCnt / nextNextLen) - (currCnt / currLen)) / (currLen + nextNextLen),
                     Math.abs((currCnt / currLen) - (prevCnt / prevLen)) / (currLen + prevLen)
             );
-            res[i] = (currLen * currLen) * der2;
+            res[i] = getErrorEstimate(prevLen, prevCnt, nextNextLen, nextNextCnt, currCnt, currLen);
         }
         
         prevLen = len;
@@ -872,11 +951,7 @@ public class SplineSketch {
         double currLen = len + nextLen;
         int currCnt = cnt + nextCnt;
 
-        double der2 = Math.max(
-                Math.abs((nextNextCnt / nextNextLen) - (currCnt / currLen)) / (currLen + nextNextLen),
-                Math.abs((currCnt / currLen) - (prevCnt / prevLen)) / (currLen + prevLen)
-        );
-        res[thresholds.length - 2] = (currLen * currLen) * der2;
+        res[thresholds.length - 2] = getErrorEstimate(prevLen, prevCnt, nextNextLen, nextNextCnt, currCnt, currLen);
         return res;
     }
 
@@ -897,39 +972,6 @@ public class SplineSketch {
         private final double[] x;      // x-coordinates (strictly increasing)
         private final int[] y;      // y-coordinates
         private final double[] d;      // derivative at each x[i]
-
-        // Note: assuming 0 < indBucket < thresholds.length - 1
-        public static int EvalPCHIPatBucket(int indBucket, double x, double[] thresholds, int[] prefSums) {
-            int k = thresholds.length;
-            if (indBucket == 0) {
-                if (x == thresholds[0])
-                    return prefSums[0];
-                else
-                    return 0;
-            }
-            double[] localThr = new double[4];
-            int[] localPrefSums = new int[4];
-            localThr[1] = thresholds[indBucket - 1];
-            localPrefSums[1] = prefSums[indBucket - 1];
-            localThr[2] = thresholds[indBucket];
-            localPrefSums[2] = prefSums[indBucket];
-            if (indBucket > 1) {
-                localThr[0] = thresholds[indBucket - 2];
-                localPrefSums[0] = prefSums[indBucket - 2];
-            } else {
-                localThr[0] = thresholds[0] - 1.0;
-                localPrefSums[0] = 0;
-            }
-            if (indBucket < k - 1) {
-                localThr[3] = thresholds[indBucket + 1];
-                localPrefSums[3] = prefSums[indBucket + 1];
-            } else {
-                localThr[3] = thresholds[k - 1] + 1.0;
-                localPrefSums[3] = prefSums[k - 1];
-            }
-            PchipInterpolator interpolator = new PchipInterpolator(localThr, localPrefSums);
-            return interpolator.valueAt(x);
-        }
 
         /**
          * Constructs a PchipInterpolator given sorted x and corresponding y values.
@@ -1111,7 +1153,54 @@ public class SplineSketch {
     }
 
 
+
+    /**
+     * A simple piecewise-linear interpolator that mimics the usage of PCHIP
+     * only for cumulative distribution queries. The real PCHIP is more sophisticated,
+     * but this is enough to demonstrate the general approach.
+     */
+    private static class LinearInterpolator implements PchipLikeInterpolator {
+        private final double[] xs;
+        private final int[] ys;
+
+        public LinearInterpolator(double[] xs, int[] ys) {
+            this.xs = xs;
+            this.ys = ys;
+        }
+
+        @Override
+        public int valueAt(double x) {
+            if (xs.length == 0) {
+                return 0;
+            }
+            if (x < xs[0]) {
+                return 0;
+            }
+            if (x >= xs[xs.length - 1]) {
+                return ys[ys.length - 1];
+            }
+            // find interval via binary search
+            int idx = Arrays.binarySearch(xs, x);
+            if (idx >= 0) {
+                return ys[idx];
+            } else {
+                int insertPoint = -idx - 1;
+                // linear interpolation between insertPoint-1 and insertPoint
+                if (insertPoint == 0) {
+                    return 0;
+                }
+                double x0 = xs[insertPoint - 1];
+                double x1 = xs[insertPoint];
+                int y0 = ys[insertPoint - 1];
+                int y1 = ys[insertPoint];
+                double ratio = (x - x0) / (x1 - x0);
+                return (int)(y0 + ratio * (y1 - y0));
+            }
+        }
+    }
+
+
     // =================================================================
-    // === End of SplineSketch class
+    // === End of SplineSketchAdjustable class
     // =================================================================
 }

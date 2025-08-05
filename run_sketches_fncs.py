@@ -35,35 +35,68 @@ def run_program_parse_stdout_and_outputFile(command, output_file, n):
     return results, size, updateTime, queryTime
 
 
-def run_splinesketch_java(dataFile, queriesFile, n, sketch_size, print_info, tmpPath='./output_files/'): #
+def run_splinesketch_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
     output_file = tmpPath + "splinesketch_" + uuid.uuid4().hex
     
-    command = f"java SplineSketchProgram {dataFile} {queriesFile} {sketch_size} {output_file}"
+    command = f"java SplineSketchProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
     return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_tdigest(dataFile, queriesFile, n, sketch_size, print_info, tmpPath='./output_files/'): #
+
+def run_splinesketchMG_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
+    output_file = tmpPath + "splinesketchMG_" + uuid.uuid4().hex
+    
+    command = f"java SplineSketchMGProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
+    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+
+def run_splinesketchLong_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
+    output_file = tmpPath + "splinesketchLong_" + uuid.uuid4().hex
+    
+    command = f"java SplineSketchLongProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
+    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+
+# HACK: using print_info for other arguments...
+def run_splinesketchAdjustable_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
+    output_file = tmpPath + "splinesketchAdjustable_" + uuid.uuid4().hex
+    
+    command = f"java SplineSketchAdjustableProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts} {print_info}"
+    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+
+def run_tdigest(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
     output_file = tmpPath + "t-digest_" + uuid.uuid4().hex
 
     # unfortunatley t-digest does not really have the desired size, so we need to adjust its compression parameter
     adjusted_size = 5 * sketch_size / 3
     adjusted_size = max(10, adjusted_size)
     
-    command = f"java -cp .:t-digest-3.3.jar TDigestProgram {dataFile} {queriesFile} {adjusted_size} {output_file}"
+    command = f"java -cp .:t-digest-3.3.jar TDigestProgram {dataFile} {queriesFile} {adjusted_size} {output_file} {num_parts}"
     return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_MomentSketch(dataFile, queriesFile, n,k, print_info, tmpPath='./output_files/'): #
+def run_MomentSketch(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
     output_file = tmpPath + "MomentSketch_" + uuid.uuid4().hex
 
-    command = f"java -Xmx100g -cp .:msolver-1.0-SNAPSHOT.jar:quantile-bench-1.0-SNAPSHOT.jar:commons-math3-3.6.1.jar MomentSketchProgram {dataFile} {queriesFile} {k} {output_file}"
+    command = f"java -Xmx100g -cp .:msolver-1.0-SNAPSHOT.jar:quantile-bench-1.0-SNAPSHOT.jar:commons-math3-3.6.1.jar MomentSketchProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
     return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_kll(dataFile, queriesFile, n,k, print_info, tmpPath='./output_files/'): #
+def run_kll(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
     output_file = tmpPath + "KLL_" + uuid.uuid4().hex
     
-    command = f"java -cp .:datasketches-java-6.0.0.jar:datasketches-memory-2.2.1.jar KLLProgram {dataFile} {queriesFile} {k} {output_file}"
+    command = f"java -cp .:datasketches-java-6.0.0.jar:datasketches-memory-2.2.1.jar KLLProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
     return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_splineSketchUniform(dataFile, queriesFile, n, sketch_size, print_info=""):
+def run_GK(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
+    output_file = tmpPath + "GK_" + uuid.uuid4().hex
+    
+    command = f"java GKProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
+    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+
+def run_DDSketch(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
+    output_file = tmpPath + "DDS_" + uuid.uuid4().hex
+    
+    command = f"java -cp .:sketches-java-0.8.3.jar  DDSketchProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
+    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+
+# Python version of SplineSketch
+def run_splineSketchUniform(dataFile, queriesFile, n, sketch_size, num_parts, print_info=""):
     data = load_floats_from_file(dataFile)
     queries = load_floats_from_file(queriesFile)
     start_time = time.perf_counter_ns()

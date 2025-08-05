@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Random;
 
-public class SplineSketchProgram {
+public class SplineSketchAdjustableProgram {
 
     public static void main(String[] args) {
-        if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java SplineSketchProgram <dataset_file> <query_file> <sketch_size> <output_file> <num_parts (optional)>");
+        if (args.length < 12) {
+            System.out.println("Usage: java SplineSketchAdjustableProgram <dataset_file> <query_file> <sketch_size> <output_file> <num_parts> heuristicErrorType, int interpolationDegree, double splitJoinRatio, double minRelativeBucketLength, double minFracBucketBoundToSplit, double epochIncrFactor, double defaultBucketBoundMult");
             return;
         }
 
@@ -23,7 +23,13 @@ public class SplineSketchProgram {
         int sketch_size = Integer.parseInt(args[2]);
         String outputFile = args[3];
         int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
-
+        int heuristicErrorType = Integer.parseInt(args[5]);
+        int interpolationDegree = Integer.parseInt(args[6]);
+        double splitJoinRatio = Double.parseDouble(args[7]);
+        double minRelativeBucketLength = Double.parseDouble(args[8]);
+        double minFracBucketBoundToSplit = Double.parseDouble(args[9]);
+        double epochIncrFactor = Double.parseDouble(args[10]);
+        double defaultBucketBoundMult = Double.parseDouble(args[11]);
         try {
             ////////////// load data and queries /////////////////
             List<Double> data = new ArrayList<>();
@@ -54,22 +60,22 @@ public class SplineSketchProgram {
             }
 
             long startTime, afterUpdatesTime, afterQueriesTime;
-            SplineSketch splineSketch;
+            SplineSketchAdjustable splineSketch;
             if (num_parts == 1) { // streaming
             
                 ////////////// measure time from here /////////////////
                 startTime = System.nanoTime();
 
-                // Create a SplineSketch with the given size
-                splineSketch = new SplineSketch(sketch_size, "");
+                // Create a SplineSketchAdjustable with the given size
+                splineSketch = new SplineSketchAdjustable(sketch_size, heuristicErrorType, interpolationDegree, splitJoinRatio, minRelativeBucketLength, minFracBucketBoundToSplit, epochIncrFactor, defaultBucketBoundMult, "");
                 for (int i = 0; i < data.size(); i++) {
                     splineSketch.update(data.get(i));
                 }
             } else {
                 int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
-                SplineSketch[] splineSketches = new SplineSketch[num_parts];
+                SplineSketchAdjustable[] splineSketches = new SplineSketchAdjustable[num_parts];
                 for (int j = 0; j < num_parts; j++) {
-                    splineSketches[j] = new SplineSketch(sketch_size, "");
+                    splineSketches[j] = new SplineSketchAdjustable(sketch_size, heuristicErrorType, interpolationDegree, splitJoinRatio, minRelativeBucketLength, minFracBucketBoundToSplit, epochIncrFactor, defaultBucketBoundMult, "");
                 }
                 // create individual sketches
                 int j = 0;
@@ -82,7 +88,7 @@ public class SplineSketchProgram {
                 // merging
                 for (int step = 1; step < num_parts; step *= 2) {
                     for (j = 0; j < num_parts - step; j += 2*step) {
-                        splineSketches[j] = SplineSketch.merge(splineSketches[j], splineSketches[j+step]);
+                        splineSketches[j] = SplineSketchAdjustable.merge(splineSketches[j], splineSketches[j+step]);
                         splineSketches[j+step] = null;
                     }
                 }

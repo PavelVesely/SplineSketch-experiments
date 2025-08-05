@@ -28,7 +28,11 @@ sketch_functions = [#(run_splineSketchUniform, "SplineSketch(Py)"),
                     (run_splinesketch_java, "SplineSketch"),
                     (run_kll, "KLL sketch"), 
                     (run_MomentSketch, "MomentSketch"),
-                    (run_tdigest, "t-digest")]
+                    (run_tdigest, "t-digest"),
+                    (run_GK, "GKAdaptive"), # also (un)comment the line style
+                    #(run_DDSketch, "DDSketch"),
+                    # (run_splinesketchMG_java, "SplineSketch+MG"),
+]
 
 
 # HERE IS THE MAIN PROGRAM
@@ -36,7 +40,7 @@ sketch_functions = [#(run_splineSketchUniform, "SplineSketch(Py)"),
 
 def one_experiment(dataFile, N, queriesFile, true_values, sketch_size, run_function, sketch_name, data_name):
     info = f"{sketch_name}_N{N}_size{sketch_size}_dataset_{data_name}"
-    estimated_ranks, actual_sketch_size, update_time_ns, query_time_ns = run_function(dataFile, queriesFile, N, sketch_size, info)
+    estimated_ranks, actual_sketch_size, update_time_ns, query_time_ns = run_function(dataFile, queriesFile, N, sketch_size, 1, info)
     time_per_update_mus = update_time_ns / (1000.0 * N) 
     time_per_query_mus = query_time_ns / (1000.0 * len(true_values))
 
@@ -47,8 +51,8 @@ def one_experiment(dataFile, N, queriesFile, true_values, sketch_size, run_funct
         errors = np.array([float('inf') for _ in true_values])
         print(f"!!!!! {sketch_name}, N {N}, size {actual_sketch_size}, dataset {data_name} -- probably FAILED")
 
-    average_error = np.mean(errors)
-    max_error = max(errors)
+    average_error = np.mean(errors) / N # normalize
+    max_error = max(errors) / N # normalize
 
     print(f"{sketch_name}, N {N}, size {actual_sketch_size}, dataset {data_name}. Average error {average_error}, max error {max_error}")
 
@@ -130,12 +134,12 @@ if __name__ == "__main__":
     ##################### PLOTTING SETUP ###########################
 
     plt.rcParams.update({'font.size': 12})
-    plt.rcParams["figure.figsize"] = (9,4)
+    plt.rcParams["figure.figsize"] = (6,2.5)
 
     # Get the default color cycle
     default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     # Define your desired linestyles
-    linestyles = ['-', ':', '-.', '--']
+    linestyles = ['-', ':', '-.', '--', (5, (10, 3)), (0, (1, 10))] # for GK: 
 
     # Create a paired cycle: assign a linestyle to each default color, cycling through linestyles.
     paired_cycle = []
@@ -171,6 +175,8 @@ if __name__ == "__main__":
             ax_utm.set_xscale('log')
             ax_utm.grid(True)
             fig_utm.tight_layout()
+            # ax_utm.legend()
+            fig_utm.savefig(plots_dir+f"{data_name}_sketchSize{sketch_size}_update_time_nolegend.pdf", format='pdf')
             ax_utm.legend()
             fig_utm.savefig(plots_dir+f"{data_name}_sketchSize{sketch_size}_update_time_legend.pdf", format='pdf')
 

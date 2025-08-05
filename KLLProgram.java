@@ -13,8 +13,8 @@ import java.util.Arrays;
 public class KLLProgram {
 
     public static void main(String[] args) {
-        if (args.length != 4) {
-            System.out.println("Usage: java KLLProgram <dataset_file> <query_file> <k> <output_file>");
+        if (args.length < 4 || args.length > 5) {
+            System.out.println("Usage: java KLLProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
             return;
         }
 
@@ -22,6 +22,7 @@ public class KLLProgram {
         String queryFile = args[1];
         Integer k = Integer.parseInt(args[2]);
         String outputFile = args[3];
+        int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
@@ -56,20 +57,50 @@ public class KLLProgram {
                 queries[i] = queriesLst.get(i);
             }
             
-            long startTime = System.nanoTime();
+            long startTime, afterUpdatesTime, afterQueriesTime;
+            org.apache.datasketches.kll.KllDoublesSketch kll;
 
-            // Create a KLL with given 
-            org.apache.datasketches.kll.KllDoublesSketch kll = org.apache.datasketches.kll.KllDoublesSketch.newHeapInstance(k);
-            for (int i = 0; i < data.size(); i++) {
-                kll.update(data.get(i), 1);
+            startTime = System.nanoTime();
+
+            if (num_parts == 1) { // streaming
+                // Create a KLL with given 
+                kll = org.apache.datasketches.kll.KllDoublesSketch.newHeapInstance(k);
+                for (int i = 0; i < data.size(); i++) {
+                    kll.update(data.get(i), 1);
+                }
+            } else {
+                int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
+                org.apache.datasketches.kll.KllDoublesSketch[] sketches = new org.apache.datasketches.kll.KllDoublesSketch[num_parts];
+                for (int j = 0; j < num_parts; j++) {
+                    sketches[j] = org.apache.datasketches.kll.KllDoublesSketch.newHeapInstance(k);
+                }
+                // create individual sketches
+                int j = 0;
+                for (int i = 0; i < n; i++) {
+                    sketches[j].update(data.get(i), 1);
+                    if (i % partSize == partSize - 1 && j < num_parts - 1) j++;
+                }
+                ////////////// measure time from here /////////////////
+                startTime = System.nanoTime();
+                // merging
+                for (int step = 1; step < num_parts; step *= 2) {
+                    for (j = 0; j < num_parts - step; j += 2*step) {
+                        sketches[j].merge(sketches[j+step]);
+                        sketches[j+step] = null;
+                    }
+                }
+                kll = sketches[0];
+
             }
-            long afterUpdatesTime = System.nanoTime();
+            assert kll.getN() == n;
 
+
+            afterUpdatesTime = System.nanoTime();
             double[] results = kll.getRanks(queries, org.apache.datasketches.quantilescommon.QuantileSearchCriteria.INCLUSIVE);
             // for (int i = 0; i < queries.length; i++) {
             //     results.add(kll.getRank(queries.get(i), org.apache.datasketches.quantilescommon.QuantileSearchCriteria.INCLUSIVE));
             // }
-            long afterQueriesTime = System.nanoTime();
+            afterQueriesTime = System.nanoTime();
             
             try (PrintWriter outputWriter = new PrintWriter(new FileWriter(outputFile))) {
                 for (int i = 0; i < results.length; i++) {

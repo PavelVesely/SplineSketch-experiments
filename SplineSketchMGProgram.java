@@ -8,13 +8,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Arrays;
-import java.util.Random;
 
-public class SplineSketchProgram {
+public class SplineSketchMGProgram {
 
     public static void main(String[] args) {
+        // NOTE: mergeability test not implemented here
         if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java SplineSketchProgram <dataset_file> <query_file> <sketch_size> <output_file> <num_parts (optional)>");
+            System.out.println("Usage: java SplineSketchMGProgram <dataset_file> <query_file> <sketch_size> <output_file>");
             return;
         }
 
@@ -22,7 +22,6 @@ public class SplineSketchProgram {
         String queryFile = args[1];
         int sketch_size = Integer.parseInt(args[2]);
         String outputFile = args[3];
-        int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
@@ -35,7 +34,6 @@ public class SplineSketchProgram {
                     data.add(value);
                 }
             }
-            int n = data.size();
             // Read the query file and query the SplineSketch using the cdf method
             List<Double> queries = new ArrayList<>();
 
@@ -52,51 +50,23 @@ public class SplineSketchProgram {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            long startTime, afterUpdatesTime, afterQueriesTime;
-            SplineSketch splineSketch;
-            if (num_parts == 1) { // streaming
             
-                ////////////// measure time from here /////////////////
-                startTime = System.nanoTime();
+            ////////////// measure time from here /////////////////
+            long startTime = System.nanoTime();
 
-                // Create a SplineSketch with the given size
-                splineSketch = new SplineSketch(sketch_size, "");
-                for (int i = 0; i < data.size(); i++) {
-                    splineSketch.update(data.get(i));
-                }
-            } else {
-                int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
-                SplineSketch[] splineSketches = new SplineSketch[num_parts];
-                for (int j = 0; j < num_parts; j++) {
-                    splineSketches[j] = new SplineSketch(sketch_size, "");
-                }
-                // create individual sketches
-                int j = 0;
-                for (int i = 0; i < n; i++) {
-                    splineSketches[j].update(data.get(i));
-                    if (i % partSize == partSize - 1 && j < num_parts - 1) j++;
-                }
-                ////////////// measure time from here /////////////////
-                startTime = System.nanoTime();
-                // merging
-                for (int step = 1; step < num_parts; step *= 2) {
-                    for (j = 0; j < num_parts - step; j += 2*step) {
-                        splineSketches[j] = SplineSketch.merge(splineSketches[j], splineSketches[j+step]);
-                        splineSketches[j+step] = null;
-                    }
-                }
-                splineSketch = splineSketches[0];
-
+            // Create a SplineSketch with the given size
+            SplineSketchMG splineSketch = new SplineSketchMG(sketch_size, "");
+            for (int i = 0; i < data.size(); i++) {
+                splineSketch.update(data.get(i));
             }
-            splineSketch.consolidate();
-            assert splineSketch.getN() == n;
 
+            splineSketch.compressNonFrequentToBucketsAndResize();
+            long afterUpdatesTime = System.nanoTime();
             ///////////////// measure time up to here ////////////
-            afterUpdatesTime = System.nanoTime();
+
             List<Integer> result = splineSketch.query(queries);
 
-            afterQueriesTime = System.nanoTime();
+            long afterQueriesTime = System.nanoTime();
 
             try (PrintWriter outputWriter = new PrintWriter(new FileWriter(outputFile))) {
                 for (int i = 0; i < result.size(); i++) {
@@ -105,6 +75,7 @@ public class SplineSketchProgram {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
             // Print the size of the sketch
             System.out.printf("%d%n", splineSketch.serializedSketchBytesCompact());
             System.out.printf("%d%n", afterUpdatesTime - startTime);

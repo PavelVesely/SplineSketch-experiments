@@ -11,6 +11,7 @@ import os
 ###############################
 
 SYNTHETIC_DATA_SIZE_DEFAULT = 1000000 # 10**6
+np.random.seed(42)
 
 def signed_lognormal(n=SYNTHETIC_DATA_SIZE_DEFAULT):
     r = np.random.lognormal(mean=0, sigma=1, size=n)
@@ -77,3 +78,29 @@ def normal_and_distinct_42(n=SYNTHETIC_DATA_SIZE_DEFAULT):
     distinct_values = [x - 21 for x in range(42)] 
     return np.concatenate((np.random.normal(0, 1, n//2), np.random.normal(1, 1, n - n//2), [np.random.choice(distinct_values) for _ in range(n - n//2)]))
 
+
+############################ SORTED WITH FREQUENT ITEMS ########################################################
+
+
+def sorted_with_frequent(n=SYNTHETIC_DATA_SIZE_DEFAULT):
+    max_freq = max(1, n // 50)
+    
+    # Estimate number of unique values needed
+    # Start with a guess and add until we reach or exceed n items
+    unique_values = []
+    frequencies = []
+    total = 0
+    value = 0
+    
+    while total < n:
+        freq = np.random.randint(1, max_freq + 1)
+        unique_values.append(value)
+        frequencies.append(freq)
+        total += freq
+        value += 1
+
+    # Trim to exact size
+    values = np.repeat(unique_values, frequencies)[:n]
+    sorted_array = np.sort(values)
+
+    return sorted_array

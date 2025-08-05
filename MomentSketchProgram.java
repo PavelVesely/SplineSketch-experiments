@@ -14,8 +14,8 @@ public class MomentSketchProgram {
     static List<Double> data;
 
     public static void main(String[] args) {
-        if (args.length != 4) {
-            System.out.println("Usage: java MomentSketchProgram <dataset_file> <query_file> <k> <output_file>");
+        if (args.length < 4 || args.length > 5) {
+            System.out.println("Usage: java MomentSketchProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
             return;
         }
 
@@ -23,6 +23,7 @@ public class MomentSketchProgram {
         String queryFile = args[1];
         int k = Integer.parseInt(args[2]);
         String outputFile = args[3];
+        int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
@@ -56,19 +57,48 @@ public class MomentSketchProgram {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            
+            long startTime, afterUpdatesTime, afterQueriesTime;
+            CMomentSketch  ms;
             ////////////// measure time from here /////////////////
-            long startTime = System.nanoTime();
+            startTime = System.nanoTime();
 
-            // Create MomentSketch with the given compression parameter
-            CMomentSketch  ms = new CMomentSketch(1e-9); // use default tolerance
-            ms.setSizeParam(k);
-            ms.initialize();
-            ms.add(arr);
-            long afterUpdatesTime = System.nanoTime();
+            if (num_parts == 1) { // streaming
+                // Create MomentSketch with the given compression parameter
+                ms = new CMomentSketch(1e-9); // use default tolerance
+                ms.setSizeParam(k);
+                ms.initialize();
+                ms.add(arr);
+            } else {
+                int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
+                CMomentSketch[] sketches = new CMomentSketch[num_parts];
+                int i = 0;
+                // create individual sketches
+                for (int j = 0; j < num_parts; j++) {
+                    sketches[j] = new CMomentSketch(1e-9); // use default tolerance
+                    sketches[j].setSizeParam(k);
+                    sketches[j].initialize();
+                    double[] sub = Arrays.copyOfRange(arr, i, Math.min(i+partSize, n));
+                    i += partSize;
+                    sketches[j].add(sub);
+                }
+                ////////////// measure time from here /////////////////
+                startTime = System.nanoTime();
+                // merging
+                for (int step = 1; step < num_parts; step *= 2) {
+                    for (int j = 0; j < num_parts - step; j += 2*step) {
+                        sketches[j].merge(new ArrayList<>(Collections.singletonList(sketches[j+step])), 0, 1);
+                        sketches[j+step] = null;
+                    }
+                }
+                ms = sketches[0];
+
+            }
+
+
+            afterUpdatesTime = System.nanoTime();
 
             Double[] results = getRanks(ms, n, queries); 
-            long afterQueriesTime = System.nanoTime();
+            afterQueriesTime = System.nanoTime();
 
             // Print the size of the serialized sketch in bytes
             System.out.printf("%d%n", (2*k + 2)*8);

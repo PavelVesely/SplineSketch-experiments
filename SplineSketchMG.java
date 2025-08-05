@@ -1,21 +1,24 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.DoubleStream;
 
 /**
  * A Java translation of the SplineSketch Python code.
  * This includes:
  *  1) equallySpacedSelection
- *  2) mergeArrayIntoBuckets
+ *  2) mergeIntoBuckets
  *  3) a SplineSketch class with similar logic
  *
  * Includes the PCHIP interpolation as a translation of scipy's PCHIP into Java.
  */
-public class SplineSketch {
+public class SplineSketchMG {
 
     // =============================================================
     // === Static functions
@@ -27,11 +30,27 @@ public class SplineSketch {
      *
      * @param lst Sorted list of doubles.
      * @param k   Number of points to select.
-     * @return ...TODO
+     * @return A List<Bucket> of length k, where each Bucket has:
+     *         - threshold: the chosen boundary
+     *         - count: 0  (since we haven't assigned counts yet)
+     *         - isProtected: false
      */
-    private static ArrayList<Object> equallySpacedSelection(double[] lst, int n, int k) {
+    private static ArrayList<Object> equallySpacedSelection(Map<Double, Integer> bufferFreqMap, int k) {
+        double[] lst = bufferFreqMap.entrySet().stream()
+                            .sorted(Map.Entry.comparingByKey())
+                            .flatMapToDouble(entry -> 
+                                DoubleStream.generate(() -> entry.getKey())
+                                            .limit(entry.getValue()))
+                            .toArray();
+        int n = lst.length;
+        // if (k > n) {
+        //     throw new IllegalArgumentException("k cannot be greater than the length of the list");
+        // }
+        // if (k <= 1) {
+        //     throw new IllegalArgumentException("k must be >= 2");
+        // }
 
-        double step = (double)(n - 1) / (double)(k - 1);
+        double step = Math.max((double)(n - 1) / (double)(k - 1), 1.0);
         double[] thresholds = new double[k];
         for (int i = 0; i < k; i++) {
             int index = (int) Math.round(i * step);
@@ -45,16 +64,15 @@ public class SplineSketch {
         int i = 0;
         while (i < k) {
             int j = i + 1;
-            while (j < k && thresholds[i] >= thresholds[j]
-                    - Math.abs(thresholds[j]) * 1e-9 - 1e-100) {
+            while (j < k && thresholds[i] >= thresholds[j] - Math.abs(thresholds[j]) * 1e-12 - 1e-100) {
                 j++;
             }
             if (j > i + 1) {
-                double prev = (i > 0) ? thresholds[i - 1] : thresholds[0] - 1.0;
-                double next = (j < k) ? thresholds[j] : thresholds[k - 1] + 1.0;
-                thresholds[i] = thresholds[i] - (thresholds[i] - prev) * 1e-9;
+                double prev = (i > 0) ? thresholds[i - 1] : thresholds[0] - Math.abs(thresholds[0]) - 1e-100;
+                double next = (j < k) ? thresholds[j] : thresholds[k - 1] + Math.abs(thresholds[k - 1]) + 1e-100;
+                thresholds[i] = thresholds[i] - Math.min((thresholds[i] - prev) / 2, Math.abs(thresholds[i]) * 1e-13 + 1e-100);
                 for (int jj = i + 2; jj < j; jj++) {
-                    thresholds[jj] = thresholds[jj - 1] + (next - thresholds[jj - 1]) * 1e-3 / k;
+                    thresholds[jj] = thresholds[jj - 1] + Math.min((next - thresholds[jj - 1]) / k, Math.abs(thresholds[jj - 1]) * 1e-13 + 1e-100);
                 }
             }
             i = j;
@@ -63,7 +81,7 @@ public class SplineSketch {
         // Check that thresholds are strictly increasing
         for (int idx = 0; idx < k - 1; idx++) {
             if (!(thresholds[idx] < thresholds[idx + 1])) {
-                throw new AssertionError("Thresholds are not strictly increasing: " + thresholds);
+                throw new AssertionError("Thresholds are not strictly increasing: thresholds[" + idx + "]=" + thresholds[idx] + ", thresholds[" + idx + "+1]=" + thresholds[idx + 1]);
             }
         }
 
@@ -76,6 +94,7 @@ public class SplineSketch {
             while (j2 < n && lst[j2] <= thresholds[idx]) {
                 j2++;
             }
+            //result.add(new Bucket(thresholds.get(idx), j2 - prevJ, false));
             counters[idx] = j2 - prevJ;
             isProtected[idx] = false;
             prevJ = j2;
@@ -87,25 +106,64 @@ public class SplineSketch {
         return result;
     }
 
-    /**
-     * Merges (sorted) array data into existing buckets. Only increments
-     * the count for the first bucket in which array[idx_array] <= bucketThreshold.
-     *
-     * This replicates `merge_array_into_buckets` from Python.
-     */
-    private static void mergeArrayIntoBuckets(double[] array, int len, double[] thresholds, int[] counters) {
-        int idxBuckets = 0;
-        int idxArray = 0;
+    // /**
+    //  * Merges (sorted) array data into existing buckets. Only increments
+    //  * the count for the first bucket in which array[idx_array] <= bucketThreshold.
+    //  *
+    //  * This replicates `merge_array_into_buckets` from Python.
+    //  */
+    // private static void mergeArrayIntoBuckets(Map<Double, Integer> bufferFreqMap, double[] thresholds, int[] counters, int  k) {
+    //     int idxBuckets = 0;
+    //     int idxArray = 0;
 
-        while (idxArray < len && idxBuckets < thresholds.length) {
-            // While next array element is <= bucket[idxBuckets].threshold,
-            // we add to that bucket's count.
-            while (idxArray < len && thresholds[idxBuckets] >= array[idxArray]) {
-                counters[idxBuckets]++;
-                idxArray++;
-            }
-            idxBuckets++;
+    //     while (idxArray < len && idxBuckets < k) {
+    //         // While next array element is <= bucket[idxBuckets].threshold,
+    //         // we add to that bucket's count.
+    //         while (idxArray < len && thresholds[idxBuckets] >= array[idxArray]) {
+    //             counters[idxBuckets]++;
+    //             idxArray++;
+    //         }
+    //         idxBuckets++;
+    //     }
+    // }
+
+    /**
+     * Merge the frequency map into bucket counters.
+     * Assumes:
+     * - thresholds is a sorted array.
+     * - counters has length thresholds.length + 1.
+     *   Bucket 0: x < thresholds[0]
+     *   For i in 1..thresholds.length-1: thresholds[i-1] <= x < thresholds[i]
+     *   Bucket thresholds.length: x >= thresholds[thresholds.length-1]
+     */
+    public static void mergeIntoBuckets(Map<Double, Integer> bufferFreqMap,
+                                          double[] thresholds,
+                                          int[] counters) {
+        for (Map.Entry<Double, Integer> entry : bufferFreqMap.entrySet()) {
+            double x = entry.getKey();
+            int freq = entry.getValue();
+            int bucket = findBucket(x, thresholds);
+            // Increase the count for this bucket by the frequency
+            if (bucket < thresholds.length)
+                counters[bucket] += freq;
         }
+    }
+
+    /**
+     * Determines the bucket index for x.
+     * Uses Arrays.binarySearch to find the insertion point.
+     * Returns:
+     *   0 if x is less than thresholds[0];
+     *   thresholds.length if x is greater than or equal to thresholds[thresholds.length-1];
+     *   Otherwise, the index of the first threshold that is greater than x.
+     */
+    private static int findBucket(double x, double[] thresholds) {
+        int idx = Arrays.binarySearch(thresholds, x);
+        if (idx < 0) {
+            // binarySearch returns (-(insertion point) - 1) if not found.
+            idx = -idx - 1;
+        }
+        return idx;
     }
 
     // =============================================================
@@ -113,6 +171,8 @@ public class SplineSketch {
     // =============================================================
 
     private int k; // number of buckets
+    //private List<Bucket> buckets;   // stored buckets
+    private boolean updatable;
     private double[] thresholds;
     private int[] counters;
     private boolean[] isProtected;
@@ -125,6 +185,8 @@ public class SplineSketch {
     private boolean[] newIsProtected;
     private long n;               // total count of items
 
+    private Map<Double, int[]> MGsketch;
+
     private String printInfo;
 
     private double splitJoinRatio;    // controls the comparison of “split vs. join” error estimates
@@ -132,6 +194,7 @@ public class SplineSketch {
     private int bufferIndex;          // index of first free slot in the buffer
 
     private double minRelativeBucketLength;  // used in areSufficientlyDifferent
+    // private int significantDigits;
     private double minAbsoluteNonzeroValue;  // used for small numbers around zero
 
     private double minFracBucketBoundToSplit;
@@ -142,14 +205,19 @@ public class SplineSketch {
     private double defaultBucketBoundMult;
     private double bucketBoundMult;
 
+    // For stats
+    // private long totalIterCnt;
+    // private long numConsolidates;
+
     /**
      * Constructs the SplineSketch with a specified number of buckets k.
      */
-    public SplineSketch(int k, String printInfo) {
+    public SplineSketchMG(int k, String printInfo) {
         if (k < 4) {
             throw new IllegalArgumentException("k must be >= 4");
         }
         this.k = k;
+        this.updatable = true;
         this.thresholds = null; // new double[k];
         this.counters = null; // new int[k];
         this.isProtected = null; // new boolean[k];
@@ -164,24 +232,45 @@ public class SplineSketch {
         this.n = 0;
         this.printInfo = printInfo;
 
+        this.MGsketch = new HashMap<>(k);
+
         // Constants (matching the Python code)
         this.splitJoinRatio = 1.5;
-        this.minRelativeBucketLength = 1e-8;
+        this.minRelativeBucketLength = 1e-11;
+        // this.significantDigits = 12;
         this.minAbsoluteNonzeroValue = Double.POSITIVE_INFINITY;
         this.minFracBucketBoundToSplit = 0.01;
 
         this.epochIncrFactor = 1.25;
         this.epochEnd = 2L * this.bufferSizeBound;
         this.defaultBucketBoundMult = 3.0;
-        this.bucketBoundMult = this.defaultBucketBoundMult;
+        this.bucketBoundMult = 3.0;
+
+        // Stats
+        // this.totalIterCnt = 0;
+        // this.numConsolidates = 0;
     }
 
     /**
      * A convenience constructor when no debug info is needed.
      */
-    public SplineSketch(int k) {
+    public SplineSketchMG(int k) {
         this(k, "");
     }
+
+    /**
+     * Returns the dynamic bucket capacity threshold, used in deciding splits/joins.
+     */
+    // private double bucketBound() {
+    //     return bucketBoundMult * n / k;
+    // }
+
+
+    // public void printAvgItersStats() {
+    //     double avg = (numConsolidates == 0) ? 0.0 : (double) totalIterCnt / (double) numConsolidates;
+    //     System.out.printf("after %.0f updates, avg. num. iterations during consolidating is %f (%d / %d)\n",
+    //             n, avg, totalIterCnt, numConsolidates);
+    // }
 
     /**
      * This method returns an approximate number of bytes for storing the sketch
@@ -190,10 +279,11 @@ public class SplineSketch {
     public int serializedSketchBytesUpdatable() {
         // k buckets => each bucket threshold is 8 bytes, count is 4 bytes,
         // plus we store a bit for isProtected
-        // + 8 bytes for min_absolute_nonzero_value
+        // + 4 bytes for k, + 8 bytes for min_absolute_nonzero_value
         // Some minimal overhead for boolean array => ceiling(k/8).
         // These details match the Python code comments.
-        return this.k * 16 + (int) Math.ceil(this.k / 8.0) + 8;
+        // MG: k * (16 bytes for heavy hitters and their adjusted and true counters)
+        return this.k * 40 + (int) Math.ceil(this.k / 8.0) + 12;
     }
 
     /**
@@ -201,63 +291,184 @@ public class SplineSketch {
      */
     public int serializedSketchBytesCompact() {
         // k thresholds => 8 bytes each, k counters => 8 bytes each, total 16*k,
-        return this.k * 16;
+        // plus 4 bytes for k.
+        // MG: k * (16 bytes for heavy hitters and their true counters)
+        return this.k * 16 + this.MGsketch.size() * 16;
     }
+
+    // /**
+    //  * Checks whether two doubles a and b are "sufficiently different"
+    //  * according to the logic in the Python code.
+    //  */
+    // private boolean areSufficientlyDifferent(double a, double b) {
+    //     double denom = Math.max(Math.max(Math.abs(a), Math.abs(b)), minAbsoluteNonzeroValue);
+    //     double relDiff = Math.abs(a - b) / denom;
+    //     return (relDiff > minRelativeBucketLength);
+    // }
 
     /**
-     * Checks whether two doubles a and b are "sufficiently different"
-     * according to the logic in the Python code.
+     * The non-heavy-hitters (freq. < n/k in MG will be merged into buckets)
+     * and then if M heavy hitters remain in MG, they will be 
      */
-    private boolean areSufficientlyDifferent(double a, double b) {
-        double denom = Math.max(Math.max(Math.abs(a), Math.abs(b)), minAbsoluteNonzeroValue);
-        double relDiff = Math.abs(a - b) / denom;
-        return (relDiff > minRelativeBucketLength);
+    public void compressNonFrequentToBucketsAndResize() {
+        // int nonHH = 0;
+        // System.err.println("compressNonFrequentToBucketsAndResize");
+        long thr = this.n / (2*this.k); // TODO: what is the right constant factor?
+        this.updatable = false;
+        List<Double> MGkeys = new ArrayList<>(MGsketch.keySet());
+        for (int i = 0; i < MGkeys.size(); i++) {
+            Double item = MGkeys.get(i);
+            int[] freqs = MGsketch.get(item);
+            int trueFreq = freqs[0];
+            if (trueFreq < thr) {
+                MGsketch.remove(item);
+                // add the item with right multiplicity to the buffer
+                for (int j = 0; j < trueFreq; j++) {
+                    if (this.bufferIndex >= this.buffer.length) {
+                        this.ensureBufferCapacity(2*this.bufferIndex);
+                    }
+                    buffer[bufferIndex++] = item;
+                }
+            }
+        }
+        // System.err.printf("MG size = %d, thresholds = %d, k = %d%n", MGsketch.size(), thresholds.length, k);
+
+        int newK = Math.max(k - this.MGsketch.size(), Math.max(k / 2, 6)); // do not go below k/2 buckets
+        if (newK != k)
+            this.resize(newK);
+        else
+            this.consolidate();
+        // System.err.printf("MG size = %d, thresholds = %d, k = %d%n", MGsketch.size(), thresholds.length, k);
+
+    }
+    /** Change the target bucket count (k) and immediately re-consolidate. */
+    public void resize(int newK) {
+        if (newK < 6) {
+            throw new IllegalArgumentException("new_k must be ≥ 6");
+        }
+        if (newK != this.k) {
+            // A “large” change => force a new epoch just like in Python
+            if (Math.abs(this.k - newK) > 0.25 * this.k) {
+                this.epochEnd = 0;
+            }
+            /* update buffer bounds and all aux arrays */
+            ensureBufferCapacity(bufferIndex);           // keep current data
+            ensureAuxArraysSize(Math.max(this.k, newK));
+            this.k = newK;
+            this.bufferSizeBound = 5 * this.k;
+
+
+            consolidate();                               // bring sketch to size k
+        }
     }
 
-    public int getK() {
-        return this.k;
+    /** Ensure the buffer array is large enough (doubling strategy). */
+    private void ensureBufferCapacity(int needed) {
+        if (this.buffer.length < needed) {
+            int newLen = Math.max(needed, this.buffer.length * 2);
+            this.buffer = Arrays.copyOf(this.buffer, newLen);
+        }
     }
 
-    public long getN() {
-        return this.n;
+    /** Resize *all* auxiliary arrays that depend on k if <code>size</code> is larger. */
+    private void ensureAuxArraysSize(int size) {
+        if (this.errorEstimates.length == size) return;   // nothing to do
+        this.errorEstimates         = new double[size];
+        this.errorEstimatesAfterJoin= new double[size];
+        this.newBoundaries          = new double[size];
+        this.prefSums               = new int[size];
+        this.oldThresholds          = new double[size];
+        this.newIsProtected         = new boolean[size];
     }
 
+    
     /**
      * Main consolidation routine (like Python's consolidate()).
      */
     public void consolidate() {
         // If no buffer and already k buckets, nothing to do.
-        if (this.bufferIndex == 0 && this.thresholds.length == k) {
+        if (this.bufferIndex == 0 && (this.thresholds == null || this.thresholds.length == k)) {
             return;
         }
-        
 
-        // Sort buffer
-        Arrays.sort(buffer, 0, this.bufferIndex);
+        // Count frequency of each number
+        Map<Double, Integer> bufferFreqMap = new HashMap<>();
         for (int i = 0; i < bufferIndex; i++) {
-            if (buffer[i] != 0.0 && Math.abs(buffer[i]) < minAbsoluteNonzeroValue) { // moved to consolidate
-                minAbsoluteNonzeroValue = Math.abs(buffer[i]);
+            double num = buffer[i];
+            int[] freqs = MGsketch.getOrDefault(num, null); // TODO: can be moved to the for cycle below
+            if (freqs != null) {
+                freqs[0]++;
+                freqs[1]++; 
+            } else {
+                bufferFreqMap.put(num, bufferFreqMap.getOrDefault(num, 0) + 1);
             }
-            if (buffer[i] > 0) break;
+        }
+        this.bufferIndex = 0;
+
+        // // Convert array to list for sorting
+        List<Double> bufferList = new ArrayList<>(bufferFreqMap.keySet());
+
+        // // Sort based on frequency (descending) -- not clear if it helps... TODO: try it
+        // bufferList.sort((a, b) -> {
+        //     return bufferFreqMap.get(b).compareTo(bufferFreqMap.get(a)); // Descending frequency
+        //     // int freqCompare = bufferFreqMap.get(b).compareTo(bufferFreqMap.get(a)); // Descending frequency
+        //     // return freqCompare != 0 ? freqCompare : Double.compare(a, b); // Ascending value
+        // });
+
+        
+        // for (Map.Entry<Double, Integer> bufEntry : bufferFreqMap.entrySet()) { // does not work as we'd like to remove stuff from the map
+        if (updatable) {
+            for (int j = 0; j < bufferList.size(); j++) {
+                Double key = bufferList.get(j);
+                int freq = bufferFreqMap.get(key);
+                if (MGsketch.size() < k) { // new item does not fit
+                    MGsketch.put(key, new int[]{freq, freq});
+                    bufferFreqMap.remove(key);
+                }
+                else {
+                    int minFreq = Integer.MAX_VALUE;
+                    for (Map.Entry<Double, int[]> entry : MGsketch.entrySet()) {
+                        int freq2 = entry.getValue()[0];
+                        if (freq2 < minFreq) {
+                            minFreq = freq2;
+                        }
+                    }
+                    minFreq = Math.min(minFreq, freq);
+                    boolean added = false;
+                    // for (Map.Entry<Double, int[]> entry : MGsketch.entrySet()) { // does not work as we'd like to remove stuff from MG
+                    List<Double> MGkeys = new ArrayList<>(MGsketch.keySet());
+                    for (int i = 0; i < MGkeys.size(); i++) {
+                        Double keyMG = MGkeys.get(i);
+                        int[] freqs = MGsketch.get(keyMG);
+                        freqs[1] -= minFreq;
+                        if (freqs[1] == 0) {
+                            MGsketch.remove(keyMG);
+                            bufferFreqMap.put(keyMG, freqs[0]);
+                            if (!added) {
+                                MGsketch.put(key, new int[]{freq, freq});
+                                bufferFreqMap.remove(key);
+                                added = true;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // If there are no existing buckets, just do an equally spaced selection
         // from the buffer.
         if (this.thresholds == null) {
-            if (this.bufferIndex < k) { // too few items to create k buckets
+            if (bufferFreqMap.size() == 0)
                 return;
-            }
-            List<Object> buckets = equallySpacedSelection(buffer, bufferIndex, k);
+            List<Object> buckets = equallySpacedSelection(bufferFreqMap, k);
             this.thresholds = (double[])buckets.get(0);
             this.counters = (int[])buckets.get(1);
             this.isProtected = (boolean[])buckets.get(2);
             if (thresholds.length != k) {
                 throw new AssertionError("The number of new buckets is " + thresholds.length + ", but k=" + k);
             }
-            this.bufferIndex = 0;
             return;
         }
-        assert this.thresholds.length > 0;
 
         // Possibly end an epoch => un-protect all buckets
         if ((long) n >= epochEnd) {
@@ -268,26 +479,42 @@ public class SplineSketch {
             bucketBoundMult = defaultBucketBoundMult;
         }
 
+        // TODO: faster using binsearch
+        double bufMin = Double.POSITIVE_INFINITY;
+        double bufMax = Double.NEGATIVE_INFINITY;
+        for (Double item : bufferFreqMap.keySet()) {
+            if (item != 0.0 && Math.abs(item) < minAbsoluteNonzeroValue) { // moved to consolidate
+                minAbsoluteNonzeroValue = Math.abs(item);
+            }
+            if (item < bufMin) bufMin = item;
+            if (item > bufMax) bufMax = item;
+        }
+
         
         int currNumThresholds = thresholds.length; // needed for merging or resizing
+        // double[] newThresholds = this.thresholds;
+        // int[] newCounters = Arrays.copyOf(this.counters, this.counters.length);
+        // boolean[] newIsProtected = this.isProtected;
+
+        // Build an interpolator from old buckets -- before merging in the buffer
+        //PchipLikeInterpolator interpolator = calcSpline(this.thresholds, this.counters); // TODO: possibly not needed many times; or we can just use local interpolation
         int prefSum = 0;
-        assert oldThresholds.length == currNumThresholds : "old len = " + oldThresholds.length + ", new " + currNumThresholds; // TODO: remove
         for (int i = 0; i < currNumThresholds; i++) {
             oldThresholds[i] = thresholds[i];
             prefSum += counters[i];
             prefSums[i] = prefSum;
-            // System.out.printf("thr %f, cntr %d, prefSum %d, isProt %s %n", thresholds[i], counters[i], prefSum, String.valueOf(isProtected[i]));
         }
 
-        // Merge buffer into that copy
-        mergeArrayIntoBuckets(buffer, this.bufferIndex, thresholds, counters);
+        mergeIntoBuckets(bufferFreqMap, thresholds, counters);
+
+        
+
         int iter = 0;
         boolean performedChanges = true;
         while (performedChanges) {
             performedChanges = false;
 
-            double boundVal = bucketBoundMult * n / k; // note: multiplier may change during an iteration
-            //System.out.printf("boundVal %f%n", boundVal);
+			double boundVal = bucketBoundMult * n / k; // note: multiplier may change during an iteration
             // Identify buckets that must be split
             // Condition 1: bucket count > 1.01 * bucketBound()
             // Condition 2: thresholds differ enough from the left neighbor
@@ -331,9 +558,7 @@ public class SplineSketch {
 
             // Check if buffer extends beyond existing min/max => new extremes
             int newExtremes = 0;
-            if (bufferIndex > 0) {
-                double bufMin = buffer[0];
-                double bufMax = buffer[bufferIndex - 1];
+            if (bufferFreqMap.size() > 0) {
                 if (bufMin < thresholds[0]) {
                     newExtremes++;
                     performedChanges = true;
@@ -373,11 +598,11 @@ public class SplineSketch {
                 // We cannot do anything => increase bucketBoundMult
                 bucketBoundMult *= 2.0;
                 boundVal *= 2.0;
+                System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
+                        + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
+                        + ", epoch end=" + epochEnd + ", k=" + k
+                        + " (info: " + printInfo + ")"); // iter=" + iter + ", 
                 if (bucketBoundMult > 100) {
-                    System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
-                            + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
-                            + ", epoch end=" + epochEnd + ", k=" + k
-                            + " (info: " + printInfo + ")"); // iter=" + iter + ", 
                     System.err.println("!!!!! RESETTING EPOCH !!!!"); // iter=" + iter + ", 
                     for (int i = 0; i < currNumThresholds; i++) {
                         isProtected[i] = false;
@@ -446,10 +671,12 @@ public class SplineSketch {
             }
 
             // Rebuild the bucket boundaries
+            // List<Double> newBoundaries = new ArrayList<>();
+            // List<Boolean> newIsProtected = new ArrayList<>();
             int iB = 0;
-            // Possibly add new min if buffer's min lies outside
-            if (this.bufferIndex > 0) {
-                double bufMin = buffer[0];
+            //int newmax = 0; //TODO: tmp
+            // Possibly add new extremes if buffer's min/max lie outside
+            if (bufferFreqMap.size() > 0) {
                 if (bufMin < thresholds[0]) {
                     newBoundaries[0] = bufMin;
                     newIsProtected[0] = false;
@@ -486,21 +713,30 @@ public class SplineSketch {
                 iB++;
                 previousSplit = false;
             }
-            
-            // Possibly add new max if buffer's max lies outside
-            if (this.bufferIndex > 0) {
-                double bufMax = buffer[bufferIndex - 1];
+            if (bufferFreqMap.size() > 0) {
                 if (bufMax > thresholds[currNumThresholds - 1]) {
                     newBoundaries[iB] = bufMax;
                     newIsProtected[iB] = false;
                     iB++;
                 }
             }
+            // if (iB + newmax != k) {
+            //     //throw new AssertionError(
+            //         System.err.println("!!! iB=" + iB + ", newmax = " + newmax + ", k=" + k);
+            // }
 
-            // if (resizeDiff > 0)
-            //     System.out.printf("%d thresholds, k=%d, %d canBeJoined, %d willJoin, %d willSplit, iB=%d %n", 
-            //         currNumThresholds, k, canBeJoined.size(), willJoin.size(), willSplit.size(), iB);
-            // assert iB == k;
+            // Ensure strictly increasing boundaries
+            // for (int iB = 0; iB < newBoundaries.size() - 1; iB++) {
+            //     if (newBoundaries.get(iB) >= newBoundaries.get(iB + 1)) {
+            //         throw new AssertionError("New boundaries are not strictly increasing!");
+            //     }
+            // }
+
+            // Recompute bucket counts by interpolation and then merging the buffer
+            //List<Bucket> updated = new ArrayList<>(newBoundaries.size());
+            // thresholds = new double[newBoundaries.size()];
+            // counters = new int[newBoundaries.size()];
+            // newIsProtected = new boolean[newBoundaries.size()];
             int prevVal = 0;
             int indOld = 0;
             currNumThresholds = iB;
@@ -527,7 +763,8 @@ public class SplineSketch {
                 prevVal = currCDF;
             }
 
-            mergeArrayIntoBuckets(buffer, this.bufferIndex, thresholds, counters);
+            mergeIntoBuckets(bufferFreqMap, thresholds, counters);
+
             iter++;
         }
         assert currNumThresholds == k;
@@ -544,8 +781,33 @@ public class SplineSketch {
         }
         assert thresholds.length == k;
 
-        // Clear the buffer
-        bufferIndex = 0;
+        // this.thresholds = newThresholds;
+        // this.counters = newCounters;
+        // this.isProtected = newIsProtected;
+
+        // Double-check sum of counts //TODO
+        int totalCount = 0;
+        for (int i = 0; i < k; i++) {
+            totalCount += counters[i];
+        }
+        for (Map.Entry<Double,int[]> entry : MGsketch.entrySet()) {
+            totalCount += entry.getValue()[0];
+        }
+        if (Math.abs(totalCount - n) > 0.1) {
+            throw new AssertionError(
+                "Bucket counts do not sum to n: sum=" + totalCount + ", n=" + n);
+        }
+
+        // Update stats
+        // totalIterCnt += iter;
+        // numConsolidates++;
+    }
+
+    public static double roundToSignificantDigits(double num, int signifDigits) {
+        if (num == 0) return 0;
+        final int power = signifDigits - (int)Math.ceil(Math.log10(Math.abs(num)));
+        final double magnitude = Math.pow(10, power);
+        return Math.round(num * magnitude) / magnitude;
     }
 
     /**
@@ -557,167 +819,17 @@ public class SplineSketch {
             System.err.println("Cannot add " + item);
             return;
         }
-        buffer[bufferIndex++] = item;
+        buffer[bufferIndex++] = item; //roundToSignificantDigits(item, this.significantDigits);
         n += 1;
+
+        // if (Math.abs(item) > 0.0 && Math.abs(item) < minAbsoluteNonzeroValue) { // moved to consolidate
+        //     minAbsoluteNonzeroValue = Math.abs(item);
+        // }
 
         if (bufferIndex >= bufferSizeBound) {
             consolidate();
         }
     }
-
-    /* ------------------------------------------------------------------
-    *  SIMPLE PUBLIC API WRAPPERS – 1-1 with the Python originals
-    * ------------------------------------------------------------------*/
-
-    /** Change the target bucket count (k) and immediately re-consolidate. */
-    public void resize(int newK) {
-        if (newK < 6) {
-            throw new IllegalArgumentException("new_k must be ≥ 6");
-        }
-        if (newK != this.k) {
-            // A “large” change => force a new epoch just like in Python
-            if (Math.abs(this.k - newK) > 0.25 * this.k) {
-                this.epochEnd = 0;
-            }
-            /* update buffer bounds and all aux arrays */
-            ensureBufferCapacity(bufferIndex);           // keep current data
-            ensureAuxArraysSize(Math.max(this.k, newK));
-            this.k = newK;
-            this.bufferSizeBound = 5 * this.k;
-
-
-            consolidate();                               // bring sketch to size k
-        }
-    }
-
-    /**
-     * Merge two sketches and *return* the sketch that now contains
-     * the combined data (the larger one is reused, the smaller one
-     * becomes garbage-collectable).
-     */
-    public static SplineSketch merge(SplineSketch a, SplineSketch b) {
-        if (a.n >= b.n) {
-            a.mergeIntoSelf(b);
-            return a;
-        } else {
-            b.mergeIntoSelf(a);
-            return b;
-        }
-    }
-
-    /* ------------------------------------------------------------------
-    *            INTERNAL MERGE ROUTINES (Python → Java)
-    * ------------------------------------------------------------------*/
-
-    /** Internal: merge <code>other</code> into <code>this</code>. */
-    private void mergeIntoSelf(SplineSketch other) {
-        /* --- PREP: splines over *current* buckets (buffers stay as buffers) --- */
-        PchipLikeInterpolator splThis  = this.calcSpline();
-        PchipLikeInterpolator splOther = other.calcSpline();
-        // System.out.printf("merging, min abs = %f, other min abs = %f%n", this.minAbsoluteNonzeroValue, other.minAbsoluteNonzeroValue);
-        // System.out.printf("num thrs = %d, other thrs = %d%n", (this.thresholds == null ? 0 : this.thresholds.length), (this.thresholds == null ? 0 : this.thresholds.length));
-        /* --- global statistics ------------------------------------------------ */
-        this.minAbsoluteNonzeroValue = Math.min(this.minAbsoluteNonzeroValue,
-                                                other.minAbsoluteNonzeroValue);
-        this.n += other.n;
-
-        /* --- append other's buffer to ours ------------------------------------ */
-        ensureBufferCapacity(this.bufferIndex + other.bufferIndex);
-        System.arraycopy(other.buffer, 0, this.buffer, this.bufferIndex,
-                        other.bufferIndex);
-        this.bufferIndex += other.bufferIndex;
-
-        /* --- UNION of bucket boundaries --------------------------------------- */
-        ArrayList<Double> unionThrs = new ArrayList<>();
-        ArrayList<Integer> unionCntrs = new ArrayList<>();
-        ArrayList<Boolean> unionProt = new ArrayList<>();
-        int i = 0, j = 0;
-        int prevSum = 0;
-        double lastT = Double.MIN_VALUE;
-        boolean prot = false;
-
-        while (i < (this.thresholds == null ? 0 : this.thresholds.length) ||
-            j < (other.thresholds == null ? 0 : other.thresholds.length)) {
-
-            boolean takeFromThis = (j >= (other.thresholds == null ? 0 : other.thresholds.length)) ||
-                                (i < (this.thresholds == null ? 0 : this.thresholds.length) &&
-                                    this.thresholds[i] <= other.thresholds[j]);
-
-            double t;
-            if (takeFromThis) {
-                t    = this.thresholds[i];
-                prot |= this.isProtected[i];
-                i++;
-            } else {
-                t    = other.thresholds[j];
-                // protection reset for thresholds coming from “other” -- so no change of prot
-                j++;
-            }
-            // definitely add the first one and the last one
-            if (i + j == 1
-                     || i + j == this.thresholds.length + other.thresholds.length - 1
-                    //  || areSufficientlyDifferent(t, lastT)
-                    || Math.abs(t - lastT) > minRelativeBucketLength * Math.max(Math.max(Math.abs(t), Math.abs(lastT)), minAbsoluteNonzeroValue)) {
-                int newSum = splThis.valueAt(t) + splOther.valueAt(t);
-                //union.add(new Bucket(t, newSum - prevSum, prot));
-                unionThrs.add(t);
-                unionCntrs.add(newSum - prevSum);
-                unionProt.add(prot);
-                // System.out.printf("thr %f, cntr=%d, prot=%s%n", t, newSum - prevSum, String.valueOf(prot));
-                prevSum = newSum;
-                lastT = t;
-                prot = false;
-            }
-        }
-        assert prevSum + bufferIndex == this.n;
-
-        /* --- copy back into the receiving sketch ------------------------------ */
-        int m = unionThrs.size();
-        ensureAuxArraysSize(Math.max(m, this.k));   // consolidate() may need ≥k slots
-        if (m > 0) {
-            this.thresholds  = new double[m];
-            this.counters    = new int[m];
-            this.isProtected = new boolean[m];
-
-            for (int idx = 0; idx < m; idx++) {
-                this.thresholds[idx]  = unionThrs.get(idx);
-                this.counters[idx]    = unionCntrs.get(idx);
-                this.isProtected[idx] = unionProt.get(idx);
-            }
-        }
-
-        /* --- finish ----------------------------------------------------------- */
-        if (m != this.k || this.bufferIndex > this.bufferSizeBound) {
-            consolidate();  // brings us back to exactly k buckets
-            ensureAuxArraysSize(this.k);
-        }
-        // System.out.printf("DONE merging%n");
-    }
-
-    /* ------------------------------------------------------------------
-    *                     HELPER  METHODS
-    * ------------------------------------------------------------------*/
-
-
-    /** Ensure the buffer array is large enough (doubling strategy). */
-    private void ensureBufferCapacity(int needed) {
-        if (this.buffer.length < needed) {
-            int newLen = Math.max(needed, this.buffer.length * 2);
-            this.buffer = Arrays.copyOf(this.buffer, newLen);
-        }
-    }
-
-    /** Resize *all* auxiliary arrays that depend on k if <code>size</code> is larger. */
-    private void ensureAuxArraysSize(int size) {
-        if (this.errorEstimates.length == size) return;   // nothing to do
-        this.errorEstimates         = new double[size];
-        this.errorEstimatesAfterJoin= new double[size];
-        this.newBoundaries          = new double[size];
-        this.prefSums               = new int[size];
-        this.oldThresholds          = new double[size];
-        this.newIsProtected         = new boolean[size];
-    }
-
 
     /**
      * Returns a "PCHIP-like" spline interpolator over the buckets array
@@ -761,7 +873,7 @@ public class SplineSketch {
         List<Integer> result = new ArrayList<>();
         PchipLikeInterpolator spline = calcSpline();
         for (int i = 0; i < items.size(); i++) {
-            double val = items.get(i);
+            double val = items.get(i); //roundToSignificantDigits(items.get(i), this.significantDigits);
             // rank in buffer
             int rankBuffer = Arrays.binarySearch(buffer, 0, bufferIndex, val);
             if (rankBuffer < 0) {
@@ -775,12 +887,18 @@ public class SplineSketch {
                     rankBuffer++;
                 }
             }
+            int rankMG = 0;
+            for (Map.Entry<Double,int[]> entry : MGsketch.entrySet()) {
+                if (entry.getKey() <= val) {
+                    rankMG += entry.getValue()[0];
+                }
+            }
 
             int rankBuckets = 0;
             if (this.thresholds != null) {
                 rankBuckets = spline.valueAt(val);
             }
-            result.add(rankBuffer + rankBuckets);
+            result.add(rankBuffer + rankBuckets + rankMG);
         }
         return result;
     }

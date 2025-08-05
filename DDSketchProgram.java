@@ -1,5 +1,5 @@
-import com.tdunning.math.stats.TDigest;
-import com.tdunning.math.stats.ScaleFunction;
+import com.datadoghq.sketch.ddsketch.DDSketch;
+import com.datadoghq.sketch.ddsketch.DDSketches;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -7,29 +7,30 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Arrays;
+import java.util.*;
 
-public class TDigestProgram {
+public class DDSketchProgram {
+
+    static double[] arr;
+    static List<Double> data;
 
     public static void main(String[] args) {
         if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java TDigestProgram <dataset_file> <query_file> <compression> <output_file> <num_parts (optional)>");
+            System.out.println("Usage: java DDSketchProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
             return;
         }
 
+        // FIXME: DDSketch size apparently depends on whether the input contains negative number or not
+
         String datasetFile = args[0];
         String queryFile = args[1];
-        double compression = Double.parseDouble(args[2]);
+        int k = Integer.parseInt(args[2]);
         String outputFile = args[3];
         int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
-            List<Double> data = new ArrayList<>();
+            data = new ArrayList<>();
             // Read the dataset file and add numbers to the SplineSketch
             try (BufferedReader datasetReader = new BufferedReader(new FileReader(datasetFile))) {
                 String line;
@@ -39,6 +40,10 @@ public class TDigestProgram {
                 }
             }
             int n = data.size();
+            arr = new double[data.size()];
+            for (int i = 0; i < data.size(); i++) {
+                arr[i] = data.get(i);
+            }
             // Read the query file and query the SplineSketch using the cdf method
             List<Double> queries = new ArrayList<>();
 
@@ -55,30 +60,28 @@ public class TDigestProgram {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            
-            long startTime, afterUpdatesTime, afterQueriesTime;
-            TDigest tDigest;
-            if (num_parts == 1) { // streaming
-                startTime = System.nanoTime();
-                // Create a TDigest with the given compression parameter
-                tDigest = TDigest.createDigest(compression); // we use the default MergingDigest
-                tDigest.setScaleFunction(ScaleFunction.K_0);
 
+            double a = 0.5 / k; // TODO how to set alpha???
+            long startTime, afterUpdatesTime, afterQueriesTime;
+            DDSketch sketch;
+            if (num_parts == 1) { // streaming
+                ////////////// measure time from here /////////////////
+                startTime = System.nanoTime();
+
+                sketch = DDSketches.collapsingLowestDense(a, k);
                 for (int i = 0; i < data.size(); i++) {
-                    tDigest.add(data.get(i));
+                    sketch.accept(data.get(i));
                 }
-            }
-            else {
+            } else {
                 int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
-                TDigest[] sketches = new TDigest[num_parts];
+                DDSketch[] sketches = new DDSketch[num_parts];
                 for (int j = 0; j < num_parts; j++) {
-                    sketches[j] = TDigest.createDigest(compression); // we use the default MergingDigest
-                    sketches[j].setScaleFunction(ScaleFunction.K_0);
+                    sketches[j] = DDSketches.collapsingLowestDense(a, k);;
                 }
                 // create individual sketches
                 int j = 0;
                 for (int i = 0; i < n; i++) {
-                    sketches[j].add(data.get(i));
+                    sketches[j].accept(data.get(i));
                     if (i % partSize == partSize - 1 && j < num_parts - 1) j++;
                 }
                 ////////////// measure time from here /////////////////
@@ -86,37 +89,69 @@ public class TDigestProgram {
                 // merging
                 for (int step = 1; step < num_parts; step *= 2) {
                     for (j = 0; j < num_parts - step; j += 2*step) {
-                        sketches[j].add(sketches[j+step]); // merge operation
+                        sketches[j].mergeWith(sketches[j+step]);
                         sketches[j+step] = null;
                     }
                 }
-                tDigest = sketches[0];
+                sketch = sketches[0];
 
-                //assert .getN() == n;
             }
-            tDigest.compress();
+
+            assert sketch.getCount() == n;
+
+
             afterUpdatesTime = System.nanoTime();
 
-            List<Integer> results = new ArrayList<>();
-            for (int i = 0; i < queries.size(); i++) {
-                results.add((int)(tDigest.cdf(queries.get(i)) * n));
-            }
+            double[] results = getRanks(sketch, n, queries); 
             afterQueriesTime = System.nanoTime();
 
+            // Print the size of the serialized sketch in bytes
+            System.out.printf("%d%n", sketch.serializedSize());
+            System.out.printf("%d%n", afterUpdatesTime - startTime);
+            System.out.printf("%d%n", afterQueriesTime - afterUpdatesTime);
+            
             try (PrintWriter outputWriter = new PrintWriter(new FileWriter(outputFile))) {
-                for (int i = 0; i < results.size(); i++) {
-                    outputWriter.printf("%d%n", results.get(i));
+                if (results != null) {
+                    for (int i = 0; i < results.length; i++) {
+                        outputWriter.printf("%d%n", (int)(results[i] * n));
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            // Print the size of the sketch
-            System.out.printf("%d%n", tDigest.byteSize());
-            System.out.printf("%d%n", afterUpdatesTime - startTime);
-            System.out.printf("%d%n", afterQueriesTime - afterUpdatesTime);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.err.printf("MomentSketchProgram exception %n" + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private static double[] getRanks(DDSketch sketch, int n, List<Double> queries) {
+        int m = queries.size();
+        double[] qL = new double[m];
+        double[] qR = new double[m];
+        double[] q = new double[m];
+        for (int i = 0; i < m; i++) {
+            qL[i] = 0.0;
+            qR[i] = 1.0;
+            q[i] = 0.5;
+        }
+        try {
+            while ((qR[0] - qL[0]) * n > 1) {
+                    double[] res = sketch.getValuesAtQuantiles(q); // a lot of repeated queries... but not clear what to do with it
+                    for (int i = 0; i < m; i++) {
+                        if (res[i] > queries.get(i)) {
+                            qR[i] = q[i];
+                        }
+                        else {
+                            qL[i] = q[i];
+                        }
+                        q[i] = (qL[i] + qR[i]) / 2;
+                    }
+            }
+            return q;
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+            return null; // will cause high error but at least we get something
         }
     }
 }
