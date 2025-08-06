@@ -17,18 +17,18 @@ import csv
 
 ########################## PARAMETERS OF EXPERIMENTS ######################3
 
-NUM_PARALLEL_JOBS = 15 # number of jobs run in parallel
+NUM_PARALLEL_JOBS = 8 # number of jobs run in parallel
 
 data_sources = [(normal, "normal"),
-                (uniform, "uniform"),
+                # (uniform, "uniform"),
                 # (gumbel, "gumbel"),
                 # (lognormal, "lognormal"), 
-                (pareto, "pareto"), 
+                # (pareto, "pareto"), 
                 # (loguniform, "loguniform"), 
                 # (signed_lognormal, "signed_lognormal"),
                 # (signed_loguniform, "signed_loguniform"),
-                (signed_loguniform_extreme, "signed_loguniform_extreme"),
-                (normal_with_1_large_change, "normal_with_1_large_change"),
+                # (signed_loguniform_extreme, "signed_loguniform_extreme"),
+                # (normal_with_1_large_change, "normal_with_1_large_change"),
                 # (normal_with_1_small_change, "normal_with_1_small_change"),
                 ## with heavy hitters
                 # # (distinct_values_42, "distinct_values_42"),
@@ -38,7 +38,7 @@ data_sources = [(normal, "normal"),
                 #(sorted_with_frequent, "sorted_with_frequent")
                 ]
 sketch_sizes = [15,20,25,32,50,75,100,125,150,175,200,250]
-input_sizes_log10 = [8]
+input_sizes_log10 = [6] # 8 was used for 
 NUM_QUERIES = 10000
 MAX_ALLOWED_SIZE_IN_BYTES = 4500
 NUM_PARTS_FOR_MERGEABILITY = 1 # should be 1 for the streaming setting, we use 10000 for mergeability testing
@@ -46,8 +46,8 @@ NUM_PARTS_FOR_MERGEABILITY = 1 # should be 1 for the streaming setting, we use 1
 ## ABLATION STUDY TYPE -- NEEDS ADJUSTMENT ALSO around LINE 138
 
 # SETUP for interpolations
-# PARAM_VALS = [(3, "PCHIP interpolation"), (1, "linear interpolation")]
-# EXP_NAME = "interpolations"
+PARAM_VALS = [(3, "PCHIP interpolation"), (1, "linear interpolation")]
+EXP_NAME = "interpolations"
 
 # SETUP for heur. error type
 # PARAM_VALS = [(2, "2nd deriv. of CDF"), (3, "3rd deriv. of CDF"), (1, "bucket counter"), (-1, "bucket length"), (0, "none")]
@@ -62,8 +62,8 @@ NUM_PARTS_FOR_MERGEABILITY = 1 # should be 1 for the streaming setting, we use 1
 # EXP_NAME = "minFracBucketBoundToSplit"
 
 # SETUP for epochIncrFactor
-PARAM_VALS = [(x/10, f"epochIncrFactor = {x/10}") for x in range(11, 21)]
-EXP_NAME = "epochIncrFactor"
+# PARAM_VALS = [(x/10, f"epochIncrFactor = {x/10}") for x in range(11, 21)]
+# EXP_NAME = "epochIncrFactor"
 
 # HERE IS THE MAIN PROGRAM
 ##########################
@@ -154,12 +154,12 @@ if __name__ == "__main__":
                 
 
                 # TODO: switch here
-                # params = f"2 {param_val} 1.5 0.00000001 0.01 1.25 3.0" # for testing interpolations
+                params = f"2 {param_val} 1.5 0.00000001 0.01 1.25 3.0" # for testing interpolations
                 # params = f"{param_val} 3 1.5 0.00000001 0.01 1.25 3.0" # for testing heur. error type
                 # params = f"2 3 {param_val} 0.00000001 0.01 1.25 3.0" # for testing gamma
                 # params = f"2 3 1.5 0.00000001 0.01 1.25 {param_val}" # for testing defaultBucketBoundMult
                 # params = f"2 3 1.5 0.00000001 {param_val} 1.25 3.0" # for testing minFracBucketBoundToSplit
-                params = f"2 3 1.5 0.00000001 0.01 {param_val} 3.0" # for testing epochIncrFactor
+                # params = f"2 3 1.5 0.00000001 0.01 {param_val} 3.0" # for testing epochIncrFactor
                 jobs.append(delayed(one_experiment)(dataFile, len(data), logN, queriesFile, true_values, size, params, param_name, data_name))
         
         #return data, queries, true_values # no need to return

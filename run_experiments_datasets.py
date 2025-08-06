@@ -19,25 +19,24 @@ KLL_ks = [8,24,42,52,62,72,82,92,102,112,122,132] #note: KLL size is also influe
 NUM_QUERIES = 10000
 NUM_PARTS_FOR_MERGEABILITY = 1 # should be 1 for the streaming setting, using 10000 for testing mergeability
 MAX_ALLOWED_SIZE_IN_BYTES = 4500
-TEST_SKEWED = True # whether to include the version with MG or not
+TEST_SKEWED = False # whether to include the version with MG or not
 sketch_functions = [#(run_splineSketchUniform, "SplineSketch"),
                     (run_splinesketch_java, "SplineSketch"),
                     (run_kll, "KLL sketch"), 
-                    # (run_MomentSketch, "MomentSketch"),
+                    (run_MomentSketch, "MomentSketch"),
                     (run_tdigest, "t-digest"),
-                    # (run_GK, "GKAdaptive"),
-                    (run_splinesketchLong_java, "SplineSketchLong"),
+                    (run_GK, "GKAdaptive"),
                     #(run_DDSketch, "DDSketch"),
                     ]
 if TEST_SKEWED:
     sketch_functions.append((run_splinesketchMG_java, "SplineSketch+MG"))
 
-NUM_PARALLEL_JOBS = 7 # number of jobs run in parallel
+NUM_PARALLEL_JOBS = 3 # number of jobs run in parallel
 
 # FUNCTION FOR LOADING REAL-WORLD DATASETS
 ###############################
 
-def load_hepmass_data(train_file='../../datasets/hepmass/all_train.csv', test_file='../../datasets/hepmass/all_test.csv'):
+def load_hepmass_data(train_file='./datasets/hepmass/all_train.csv', test_file='./datasets/hepmass/all_test.csv'):
     data = []
 
     # Helper function to read and process a file
@@ -54,7 +53,7 @@ def load_hepmass_data(train_file='../../datasets/hepmass/all_train.csv', test_fi
     
     return data
 
-def load_power_data(filename='../../datasets/household_power_consumption/household_power_consumption.txt'):
+def load_power_data(filename='./datasets/household_power_consumption/household_power_consumption.txt'):
     data = []
 
     with open(filename, 'r') as file:
@@ -67,32 +66,14 @@ def load_power_data(filename='../../datasets/household_power_consumption/househo
                 pass
     return data
 
-def load_sosd_books_data(filename='../../datasets/SOSDdata/books_800M_uint64'):
+def load_sosd_books_data(filename='./datasets/SOSDdata/books_800M_uint64'):
     data = np.fromfile(filename, dtype=np.uint64)[1:] # based on https://github.com/learnedsystems/SOSD/blob/f52f4cba01dfcd37f1574551fccef00198863b88/downsample.py#L10
     return np.random.permutation(data)
-
-def load_SOSD_data(filename, dir='../../datasets/SOSDdata/'): # we randomly permute the data
-    filename = dir + filename
-    data = np.fromfile(filename, dtype=np.uint64)[1:] # based on https://github.com/learnedsystems/SOSD/blob/f52f4cba01dfcd37f1574551fccef00198863b88/downsample.py#L10
-    return np.random.permutation(data)
-
-def load_sosd_wiki_data():
-    return load_SOSD_data("wiki_ts_200M_uint64")
-
-# def load_sosd_books_data():
-#     return load_SOSD_data("books_800M_uint64")
-
-def load_sosd_osm_data():
-    return load_SOSD_data("osm_cellids_800M_uint64")
-
-
 
 data_sources = [
-                # (load_hepmass_data, "hepmass"),
-                # (load_power_data, "power"),
-                (load_sosd_books_data, "sosd_books"),
-                (load_sosd_wiki_data, "sosd_wiki"),
-                # (load_sosd_osm_data, "sosd_osm")
+                (load_hepmass_data, "hepmass"),
+                (load_power_data, "power"),
+                # (load_sosd_books_data, "sosd_books"), # WARNING: large dataset, a lot of memory required
                 ] 
 
 # HERE IS THE MAIN PROGRAM

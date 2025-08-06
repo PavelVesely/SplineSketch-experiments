@@ -1,9 +1,29 @@
+// based on https://github.com/coolwanglu/quantile-alg/blob/master/gk.h
+// LICENSE (preserved)
 /*
- * Straight‑through, statement‑for‑statement translation of the C++ class you
- * supplied.  Only syntax has changed from C++ to Java; all identifiers,
- * class / method names, and control flow remain intact.  Read the notes that
- * follow the class for a few unavoidable Java‑specific caveats.
+ * Implementation of the GK algorithm
+ * Copyright (c) 2013 Lu Wang <coolwanglu@gmail.com>
  */
+
+/*
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,30 +32,25 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.TreeMap;
 
-/** Port of the C++ template<class Double> GK implementation. */
+// based on 
 public class GK {
 
-    /*------------------------------------------------------------------------
-     *  Public data members – identical names & types (bit‑width permitting)
-     *------------------------------------------------------------------------*/
-    public long   last_n;              // C++ long long
+    public long   last_n;
     public double EPS;
-    public double   max_v;               // C++ uint64_t → Java long
+    public double   max_v;
 
     /*-------------------------------- entry --------------------------------*/
     public static class entry {
-        public int g;                  // C++ unsigned int → Java int
+        public int g;
         public int delta;
 
         public entry() { }
         public entry(int _g, int _d) { this.g = _g;  this.delta = _d; }
     }
 
-    /** C++ std::multimap <Double, entry>.  We never insert duplicates, so   *
-     *  TreeMap gives the same ordering semantics.                            */
     public final TreeMap<Double, entry> entries_map = new TreeMap<>();
 
-    public int max_gd;                 // unsigned int → int
+    public int max_gd;
 
     /*----------------------------- SummaryEntry ----------------------------*/
     public static class SummaryEntry {
@@ -52,7 +67,6 @@ public class GK {
 
         @Override
         public int compareTo(ThresholdEntry o) {
-            // min‑heap (same as std::greater in C++)
             return Integer.compare(this.threshold, o.threshold);
         }
     }
@@ -60,7 +74,7 @@ public class GK {
             new PriorityQueue<>();
 
     /*------------------------------------------------------------------------
-     *  Constructors   (mirror C++ signatures)
+     *  Constructors
      *------------------------------------------------------------------------*/
     public GK(double eps) { this(eps, Double.MAX_VALUE); }
 
@@ -75,9 +89,6 @@ public class GK {
         entries_map.put(sentinelKey, new entry(1, 0)); // boxed integral Double
     }
 
-    /*------------------------------------------------------------------------
-     *  finalize()   (same name as C++ even though Object has one)
-     *------------------------------------------------------------------------*/
     @Override
     @SuppressWarnings({"deprecation", "RedundantSuppression"})
     public void finalize() {
@@ -110,9 +121,6 @@ public class GK {
         return entries_map.entrySet().size();
     }
 
-    /*------------------------------------------------------------------------
-     *  query_for_value – identical logic / name
-     *------------------------------------------------------------------------*/
     public Double query_for_value(double rank) {
         SummaryEntry probe = new SummaryEntry();
         probe.g     = (long)(rank * last_n + max_gd);
@@ -126,9 +134,6 @@ public class GK {
         if (idx < 0) idx = -idx - 1;  // insertion point
 
         if (idx == 0) {
-            /* The original C++ returns literal 0 here.  That only makes sense
-             * when Double is an integral type; returning null preserves type
-             * safety for the general case.  Adjust if you know Double.       */
             return null;
         }
         return summary.get(idx - 1).v;
@@ -173,9 +178,6 @@ public class GK {
         return se.g + se.delta / 2;
     }
 
-    /*------------------------------------------------------------------------
-     *  feed – full algorithm, ported line‑for‑line
-     *------------------------------------------------------------------------*/
     public void feed(Double v) {
         ++last_n;
 
@@ -203,9 +205,6 @@ public class GK {
             ++ecur.g;
                     //  System.out.printf("adding %f, increasing g %n", v);
 
-            /* heap entries for ecur and its predecessor now “behind” by one;
-             * the C++ comments say we fix that lazily when we next compress.
-             */
         } else if (entries_map.containsKey(v)) {
             Map.Entry<Double,entry> iter2 = entries_map.floorEntry(v);
             assert iter2.getKey() == v : "...";
@@ -230,9 +229,6 @@ public class GK {
 //             for (Map.Entry<Double, entry> entry : entries_map.entrySet()) {
 //                 System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue().g + ", " + entry.getValue().delta);
 //             }
-            /*----------------------------------------------------------
-             *  try to remove one tuple as in C++ while‑loop
-             *---------------------------------------------------------*/
             while (true) {
                 ThresholdEntry topEntry = compress_heap.peek();
                 if (topEntry == null || topEntry.threshold > threshold) break;
@@ -284,33 +280,3 @@ public class GK {
         }
     }
 }
-
-/*-----------------------------------------------------------------------------
- *  Notes & caveats
- *-----------------------------------------------------------------------------
- *  1.  Unsigned types:  Java has none, so 32‑bit unsigned ints are stored in
- *      signed int; 64‑bit uint64_t → long.  All arithmetic still matches as
- *      long as your values never exceed 2^63‑1 (same as C++ signed‑long‑long).
- *
- *  2.  The original C++ returns literal 0 when query_for_value() is asked for
- *      a rank smaller than the first summary tuple.  Returning 0 generically
- *      in Java is impossible without reflection, so the code above returns
- *      null.  If `Double` is always Integer or Long in your use‑case, feel
- *      free to cast `(Double)(Integer)0` or `(Double)(Long)0L` instead.
- *
- *  3.  `finalize()` in Java is deprecated; using the same name is *legal* but
- *      triggers a warning.  The `@SuppressWarnings("deprecation")` marker keeps
- *      the compiler quiet while preserving the C++ API surface exactly.
- *
- *  4.  `TreeMap` guarantees iterator stability for reads, but its `Entry`
- *      objects are not immutable.  The algorithm stores those entries in the
- *      heap exactly as the C++ stores iterators.  That is sufficient, because
- *      insertions/removals that might invalidate them re‑compute and re‑push
- *      as needed (same as the original).
- *
- *  5.  Assertions (`assert`) are enabled only when the JVM is started with
- *      the `‑ea` flag, matching C++’s compile‑time assert semantics.
- *
- *  With these minor Java‑isms aside, every branch, loop and arithmetic
- *  expression is a direct lift from the C++ source you provided.
- */

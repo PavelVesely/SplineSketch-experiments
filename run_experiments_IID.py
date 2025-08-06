@@ -18,31 +18,31 @@ import csv
 NUM_PARALLEL_JOBS = 5 # number of jobs run in parallel
 
 data_sources = [
-                #  (normal, "normal"),
-#                 (uniform, "uniform"),
-#                 (gumbel, "gumbel"),
-#                 (lognormal, "lognormal"), (pareto, "pareto"), 
-#                 (loguniform, "loguniform"), 
-#                 (signed_lognormal, "signed_lognormal"),
-#                 (signed_loguniform, "signed_loguniform"),
-#                 (signed_loguniform_extreme, "signed_loguniform_extreme"),
-#                 (normal_with_1_large_change, "normal_with_1_large_change"),
-#                 (normal_with_1_small_change, "normal_with_1_small_change"),
+                (normal, "normal"),
+                # (uniform, "uniform"),
+                # (gumbel, "gumbel"),
+                # (lognormal, "lognormal"), (pareto, "pareto"), 
+                # (loguniform, "loguniform"), 
+                # (signed_lognormal, "signed_lognormal"),
+                # (signed_loguniform, "signed_loguniform"),
+                # (signed_loguniform_extreme, "signed_loguniform_extreme"),
+                # (normal_with_1_large_change, "normal_with_1_large_change"),
+                # (normal_with_1_small_change, "normal_with_1_small_change"),
                 ## with heavy hitters
                 # (distinct_values_42, "distinct_values_42"),
                 # (distinct_values_5, "distinct_values_5"),
                 # (distinct_values_150, "distinct_values_150"),
-                (normal_and_distinct_42, "normal_and_distinct_42"),
+                # (normal_and_distinct_42, "normal_and_distinct_42"),
                 # (sorted_with_frequent, "sorted_with_frequent")
                 ]
 sketch_sizes = [15,20,25,32,50,75,100,125,150,175,200,250]
 MomentSketch_ks = [7,9,11,13,15,19,23,27,33,39,45,51,57]
 KLL_ks = [8,24,42,52,62,72,82,92,102,112,122,132] # KLL size is also influenced by log(N) in the DataSketches implementation
-input_sizes_log10 = [8]
+input_sizes_log10 = [6] # 8 was used for experiments but takes longer time
 NUM_QUERIES = 10000
 MAX_ALLOWED_SIZE_IN_BYTES = 4500
 NUM_PARTS_FOR_MERGEABILITY = 1 # should be 1 for the streaming setting, we use 10000 for mergeability testing
-TEST_SKEWED = True # whether to include the version with MG or not
+TEST_SKEWED = False # whether to include the version with MG or not
 sketch_functions = [#(run_splineSketchUniform, "SplineSketch(Py)"), # not fully supported now...
                     (run_splinesketch_java, "SplineSketch"),
                     (run_kll, "KLL sketch"), 
@@ -273,15 +273,15 @@ if __name__ == "__main__":
             ax_utm.set_yscale('log')
             ax_utm.grid(True)
             fig_utm.tight_layout()
-            # ax_utm.legend()
-            fig_utm.savefig(plots_dir+f"{data_name}_logN{logN}{mergingSuffix}_update_time_nolegend.pdf", format='pdf')
+            ax_utm.legend()
+            fig_utm.savefig(plots_dir+f"{data_name}_logN{logN}{mergingSuffix}_update_time_legend.pdf", format='pdf')
 
             ax_qtm.set_xlabel('sketch size in bytes')
             ax_qtm.set_ylabel('time per query [μs] (log scale)')
             ax_qtm.set_yscale('log')
             ax_qtm.grid(True)
             fig_qtm.tight_layout()
-            # ax_qtm.legend()
-            fig_qtm.savefig(plots_dir+f"{data_name}_logN{logN}{mergingSuffix}_query_time_nolegend.pdf", format='pdf')
+            ax_qtm.legend()
+            fig_qtm.savefig(plots_dir+f"{data_name}_logN{logN}{mergingSuffix}_query_time_legend.pdf", format='pdf')
 
 

@@ -106,27 +106,6 @@ public class SplineSketchMG {
         return result;
     }
 
-    // /**
-    //  * Merges (sorted) array data into existing buckets. Only increments
-    //  * the count for the first bucket in which array[idx_array] <= bucketThreshold.
-    //  *
-    //  * This replicates `merge_array_into_buckets` from Python.
-    //  */
-    // private static void mergeArrayIntoBuckets(Map<Double, Integer> bufferFreqMap, double[] thresholds, int[] counters, int  k) {
-    //     int idxBuckets = 0;
-    //     int idxArray = 0;
-
-    //     while (idxArray < len && idxBuckets < k) {
-    //         // While next array element is <= bucket[idxBuckets].threshold,
-    //         // we add to that bucket's count.
-    //         while (idxArray < len && thresholds[idxBuckets] >= array[idxArray]) {
-    //             counters[idxBuckets]++;
-    //             idxArray++;
-    //         }
-    //         idxBuckets++;
-    //     }
-    // }
-
     /**
      * Merge the frequency map into bucket counters.
      * Assumes:

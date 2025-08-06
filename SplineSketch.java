@@ -374,11 +374,11 @@ public class SplineSketch {
                 bucketBoundMult *= 2.0;
                 boundVal *= 2.0;
                 if (bucketBoundMult > 100) {
-                    System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
-                            + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
-                            + ", epoch end=" + epochEnd + ", k=" + k
-                            + " (info: " + printInfo + ")"); // iter=" + iter + ", 
-                    System.err.println("!!!!! RESETTING EPOCH !!!!"); // iter=" + iter + ", 
+                    // System.err.println("! willJoin.size() < (mustSplit.size() + newExtremes + resizeDiff) => increasing bucket bound multiplier to "
+                    //         + bucketBoundMult + " at n=" + n + ", resize diff=" + resizeDiff
+                    //         + ", epoch end=" + epochEnd + ", k=" + k
+                    //         + " (info: " + printInfo + ")"); // iter=" + iter + ", 
+                    // System.err.println("!!!!! RESETTING EPOCH !!!!"); // iter=" + iter + ", 
                     for (int i = 0; i < currNumThresholds; i++) {
                         isProtected[i] = false;
                     }

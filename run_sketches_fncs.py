@@ -48,12 +48,6 @@ def run_splinesketchMG_java(dataFile, queriesFile, n, sketch_size, num_parts, pr
     command = f"java SplineSketchMGProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
     return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_splinesketchLong_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "splinesketchLong_" + uuid.uuid4().hex
-    
-    command = f"java SplineSketchLongProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
-
 # HACK: using print_info for other arguments...
 def run_splinesketchAdjustable_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
     output_file = tmpPath + "splinesketchAdjustable_" + uuid.uuid4().hex
