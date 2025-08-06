@@ -1,6 +1,12 @@
 # SplineSketch: a new quantile sketch with uniform error guarantees and high accuracy in practice
 
-Here, we provide its prototype implementation [in Python](spline_sketch_uniform.py) and [in Java](SplineSketch.java), and an experimental pipeline for evaluating its accuracy on synthetic and real-world datasets and also its update, merge, and query times, in comparison with [t-digest](https://github.com/tdunning/t-digest), [KLL](https://datasketches.apache.org/docs/KLL/KLLSketch.html), GKAdaptive, and [MomentSketch](https://github.com/stanford-futuredata/msketch).
+Here, we provide its prototype implementation [in Python](spline_sketch_uniform.py) and [in Java](SplineSketch.java), and an experimental pipeline for evaluating its accuracy on synthetic and real-world datasets and also its update, merge, and query times, in comparison with [t-digest](https://github.com/tdunning/t-digest), [KLL](https://datasketches.apache.org/docs/KLL/KLLSketch.html), [GKAdaptive](https://github.com/coolwanglu/quantile-alg), and [MomentSketch](https://github.com/stanford-futuredata/msketch).
+Additionally, [DDSketch](https://github.com/DataDog/sketches-java) may also be included in the evaluation.
+
+SplineSketch comes in two main versions:
+- `SplineSketch.java` -- faster version without frequent items filtering.
+- `SplineSketchMG.java` -- with frequent items filtering by the Misra-Gries sketch.
+Additionally, `SplineSketchAdjustable.java` is a modification of `SplineSketch.java` that allows for changing the parameters and components of the sketch, intended for ablation studies.
 
 ## Running experiments
 
@@ -11,6 +17,7 @@ There are four experimental pipelines, with parameters adjusted in the individua
 2. Accuracy and running time experiments on real-world datasets: download datasets as described below and then run with `python run_experiments_datasets.py` (optionally adjust the datasets in `load_<dataset>_data` functions)
 3. Update time experiment:  run with `python run_experiments_update_time.py`
 4. Query time experiment:  run with `python run_experiments_query_time.py`
+5. Query time experiment:  run with `python run_experiments_ablation.py`
 
 All of these Python programs produce a set of plots with results into `plots/` directory.
 
