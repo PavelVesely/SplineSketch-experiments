@@ -8,6 +8,8 @@ SplineSketch in Java comes in two main versions:
 - `SplineSketchMG.java` -- with frequent items filtering by the Misra-Gries sketch.
 Additionally, `SplineSketchAdjustable.java` is a modification of `SplineSketch.java` that allows for changing the parameters and components of the sketch, intended for ablation studies.
 
+The [plots/](plots/) directory contains results of the experiments.
+
 ## Running experiments
 
 **Setup:** Clone the repository and then run `make` to compile the Java wrappers that run the individual skeches.
