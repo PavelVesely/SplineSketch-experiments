@@ -123,7 +123,7 @@ class WorkloadTests(unittest.TestCase):
             data = provenance()
         self.assertIsNone(data["git_commit"])
         self.assertIsNone(data["git_dirty"])
-        self.assertIn("KLLProgram.java", data["source_hashes"])
+        self.assertIn("java/other_sketches/KLLProgram.java", data["source_hashes"])
 
 
 class JavaTests(unittest.TestCase):

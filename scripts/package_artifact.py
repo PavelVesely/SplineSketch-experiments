@@ -20,9 +20,9 @@ def main():
     files = [p for p in ROOT.iterdir() if p.is_file() and
              (p.suffix in (".py", ".java", ".jar", ".md", ".json", ".txt", ".sh") or
               p.name in ("Makefile", "Dockerfile", "LICENSE", ".dockerignore", ".gitignore"))]
-    for directory in ("configs", "reproduction", "docs", "tests", "scripts", "third_party", "plots"):
+    for directory in ("configs", "reproduction", "docs", "tests", "scripts", "java", "third_party", "plots"):
         files += [p for p in (ROOT / directory).rglob("*") if p.is_file() and
-                  "__pycache__" not in p.parts and p.suffix != ".pyc"]
+                  "__pycache__" not in p.parts and p.suffix not in (".pyc", ".class")]
     commit = None
     if shutil.which("git"):
         process = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True)

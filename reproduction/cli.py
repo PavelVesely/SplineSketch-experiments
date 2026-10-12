@@ -86,7 +86,7 @@ def validate(cfg):
 
 def doctor(args):
     from importlib.metadata import version
-    from .java import PROGRAMS, check_java
+    from .java import PROGRAMS, check_java, program_directory
     info = check_java()
     print(json.dumps(info, indent=2))
     for name in ("numpy", "matplotlib", "joblib", "zstandard"):
@@ -103,7 +103,9 @@ def doctor(args):
     for name, entry in manifest["jars"].items():
         if digest(ROOT / name) != entry["sha256"]:
             raise ValueError(f"Bundled dependency checksum mismatch: {name}")
-    missing = [program + ".class" for program, _ in PROGRAMS.values() if not (ROOT / (program + ".class")).exists()]
+    missing = [str((program_directory(program) / (program + ".class")).relative_to(ROOT))
+               for program, _ in PROGRAMS.values()
+               if not (program_directory(program) / (program + ".class")).exists()]
     if missing:
         raise ValueError(f"Missing compiled programs: {missing}. Run python reproduce.py build")
     if args.datasets:

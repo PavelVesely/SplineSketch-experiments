@@ -17,7 +17,7 @@ import numpy as np
 
 from .common import ROOT, SCHEMA, digest, identity, load_json, write_json
 from .data import prepare_data, prepare_queries
-from .java import NumericalFailure, run_java
+from .java import JAVA_DIRS, NumericalFailure, run_java
 
 
 def now():
@@ -25,7 +25,7 @@ def now():
 
 
 def provenance():
-    sources = list(ROOT.glob("*.java")) + [ROOT / "IID_generators.py"]
+    sources = [p for directory in JAVA_DIRS for p in directory.glob("*.java")] + [ROOT / "IID_generators.py"]
     sources += list((ROOT / "reproduction").glob("*.py"))
     sources += list((ROOT / "configs").glob("*.json")) + list(ROOT.glob("*.jar"))
     hashes = {str(p.relative_to(ROOT)): digest(p) for p in sorted(sources)}

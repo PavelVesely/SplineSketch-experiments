@@ -10,6 +10,13 @@ import numpy as np
 
 from .common import ROOT
 
+JAVA_DIRS = (ROOT / "java" / "splinesketch", ROOT / "java" / "other_sketches")
+
+
+def program_directory(program):
+    return JAVA_DIRS[0] if program.startswith("SplineSketch") else JAVA_DIRS[1]
+
+
 PROGRAMS = {
     "splinesketch": ("SplineSketchProgram", []),
     "splinesketch_mg": ("SplineSketchMGProgram", []),
@@ -48,8 +55,8 @@ def check_java():
 
 def compile_java():
     check_java()
-    classpath = os.pathsep.join([str(ROOT)] + [str(p) for p in sorted(ROOT.glob("*.jar"))])
-    sources = [str(p) for p in sorted(ROOT.glob("*.java"))]
+    classpath = os.pathsep.join([str(p) for p in JAVA_DIRS] + [str(p) for p in sorted(ROOT.glob("*.jar"))])
+    sources = [str(p) for p in sorted(p for directory in JAVA_DIRS for p in directory.glob("*.java"))]
     process = subprocess.run(["javac", "-encoding", "UTF-8", "-cp", classpath] + sources,
                              capture_output=True, text=True, cwd=ROOT)
     if process.returncode:
@@ -65,7 +72,7 @@ def run_java(sketch, data, queries, n, parameter, parts=1, params=None,
     if parts != 1 and sketch in ("gk", "splinesketch_mg"):
         raise ValueError(f"{LABELS[sketch]} merge is unavailable in this repository")
     program, jars = PROGRAMS[sketch]
-    classpath = os.pathsep.join([str(ROOT)] + [str(ROOT / jar) for jar in jars])
+    classpath = os.pathsep.join([str(program_directory(program))] + [str(ROOT / jar) for jar in jars])
     if tmp_dir:
         Path(tmp_dir).mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="spline-", dir=tmp_dir) as directory:

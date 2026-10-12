@@ -123,12 +123,15 @@ For example:
 The five original `run_experiments_*.py` filenames are compatibility entry points
 to the corresponding configurable suite, using the smoke profile by default.
 Use `--profile paper` for the original-scale workloads. The older exploratory
-`test_merge.py` is not a validation test or the supported reproduction entry point.
+`scripts/test_merge.py` is not a validation test or the supported reproduction entry point.
 It now raises an error when requesting unsupported GKAdaptive/MG merging.
 
-The Java prototypes are [SplineSketch.java](SplineSketch.java) (standard),
-[SplineSketchMG.java](SplineSketchMG.java) (Misra–Gries filtering), and
-[SplineSketchAdjustable.java](SplineSketchAdjustable.java) (ablations).
+Java sources and compiled classes live in `java/splinesketch/` (SplineSketch
+variants) and `java/other_sketches/` (comparison sketches).
+
+The Java prototypes are [SplineSketch.java](java/splinesketch/SplineSketch.java) (standard),
+[SplineSketchMG.java](java/splinesketch/SplineSketchMG.java) (Misra–Gries filtering), and
+[SplineSketchAdjustable.java](java/splinesketch/SplineSketchAdjustable.java) (ablations).
 [spline_sketch_uniform.py](spline_sketch_uniform.py) is an exploratory Python
 prototype; comparisons in the published paper use Java.
 
