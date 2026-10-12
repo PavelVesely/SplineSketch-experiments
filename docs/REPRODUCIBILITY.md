@@ -12,7 +12,9 @@ claims. Badge decisions require independent evaluation. No badge is claimed here
 
 ## Environment and installation
 
-- JDK 17; validation used Temurin 17.0.16+8. Put its `bin` directory on PATH.
+- Working `java` and `javac` commands, each version 17 or newer, on PATH.
+  No installation directory or vendor is required. Validation used Temurin
+  17.0.16+8; compilation targets Java 17 even with a newer compiler.
 - Python 3.8 or newer with venv and pip (including 3.13 and 3.14). Validation used Python 3.9.6 on Apple silicon
   macOS; the container uses Ubuntu 22.04 Python 3.10.
 - Compatible dependency ranges in `requirements.txt`; pip selects releases
@@ -34,7 +36,7 @@ packages. Only Python 3.9 has been tested locally. Preserve the exact environmen
 with `python -m pip freeze > requirements-local.txt`; run metadata records direct
 dependency versions.
 
-`doctor` validates JDK availability, Python package requirements, JAR hashes and compiled
+`doctor` validates Java runtime and compiler availability, Python package requirements, JAR hashes and compiled
 wrapper presence. `doctor --datasets power` validates existing data without
 initiating downloads. Native Windows uses the Python commands and portable
 classpaths, but is not yet tested. `resource` memory counters are unavailable on

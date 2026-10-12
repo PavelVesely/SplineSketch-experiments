@@ -13,7 +13,7 @@ are saved under `results/<run>/figures/`.
 
 ## Start with a smoke run
 
-Install **JDK 17** (`java` and `javac` on PATH) and **Python 3.8 or newer**, then:
+Install **Java 17 or newer** (`java` and `javac` on PATH) and **Python 3.8 or newer**, then:
 
 ```sh
 git clone https://github.com/PavelVesely/SplineSketch-experiments.git

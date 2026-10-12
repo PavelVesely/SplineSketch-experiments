@@ -144,6 +144,31 @@ class WorkloadTests(unittest.TestCase):
         self.assertIn("java/other_sketches/KLLProgram.java", data["source_hashes"])
 
 
+class JavaVersionTests(unittest.TestCase):
+    def test_accepts_17_and_newer_with_different_compiler_version(self):
+        from unittest.mock import patch
+        for runtime, compiler in ((17, 17), (21, 21), (25, 25), (17, 25)):
+            with self.subTest(runtime=runtime, compiler=compiler), \
+                    patch("reproduction.java.shutil.which", side_effect=lambda name: name), \
+                    patch("reproduction.java.java_version", side_effect=[
+                        f'openjdk version "{runtime}" 2026-01-01', f'javac {compiler}.0.1']):
+                self.assertIn("java", check_java())
+
+    def test_rejects_missing_old_and_unrecognized_commands(self):
+        from unittest.mock import patch
+        with patch("reproduction.java.shutil.which", return_value=None):
+            with self.assertRaisesRegex(RuntimeError, "Both java and javac"):
+                check_java()
+        for runtime, compiler in (('java version "1.8.0"', 'javac 17'),
+                                  ('openjdk 21.0.1', 'javac 16.0.2'),
+                                  ('unknown runtime', 'javac 21')):
+            with self.subTest(runtime=runtime, compiler=compiler), \
+                    patch("reproduction.java.shutil.which", side_effect=lambda name: name), \
+                    patch("reproduction.java.java_version", side_effect=[runtime, compiler]):
+                with self.assertRaises(RuntimeError):
+                    check_java()
+
+
 class JavaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

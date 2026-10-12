@@ -39,17 +39,23 @@ class NumericalFailure(RuntimeError):
 def java_version(executable):
     process = subprocess.run([executable, "-version"], capture_output=True, text=True)
     if process.returncode:
-        raise RuntimeError(f"{executable} is unavailable. Install a JDK 17 or use Docker.\n{process.stderr}")
+        raise RuntimeError(f"{executable} is unavailable. Provide working java and javac commands (version 17 or newer), or use Docker.\n{process.stderr}")
     return (process.stdout + process.stderr).strip()
 
 
 def check_java():
     java, javac = shutil.which("java"), shutil.which("javac")
     if not java or not javac:
-        raise RuntimeError("JDK 17 is required (both java and javac on PATH). Alternatively use Docker.")
+        raise RuntimeError("Both java and javac must be on PATH (version 17 or newer). Alternatively use Docker.")
     versions = {"java": java_version(java), "javac": java_version(javac)}
-    if not re.search(r'version "17\.', versions["java"]) or not versions["javac"].startswith("javac 17."):
-        raise RuntimeError("The artifact requires JDK 17. Install it or use the provided Dockerfile.")
+    for name, output in versions.items():
+        pattern = r'\b(?:openjdk|java)\s+(?:version\s+)?"?(\d+)(?:\.(\d+))?' if name == "java" else r'\bjavac\s+(\d+)(?:\.(\d+))?'
+        match = re.search(pattern, output)
+        if not match:
+            raise RuntimeError(f"Cannot determine {name} version:\n{output}")
+        major = int(match.group(2) or 0) if match.group(1) == "1" else int(match.group(1))
+        if major < 17:
+            raise RuntimeError(f"{name} version 17 or newer is required; found:\n{output}")
     return versions
 
 
@@ -57,7 +63,7 @@ def compile_java():
     check_java()
     classpath = os.pathsep.join([str(p) for p in JAVA_DIRS] + [str(p) for p in sorted(ROOT.glob("*.jar"))])
     sources = [str(p) for p in sorted(p for directory in JAVA_DIRS for p in directory.glob("*.java"))]
-    process = subprocess.run(["javac", "-encoding", "UTF-8", "-cp", classpath] + sources,
+    process = subprocess.run(["javac", "--release", "17", "-encoding", "UTF-8", "-cp", classpath] + sources,
                              capture_output=True, text=True, cwd=ROOT)
     if process.returncode:
         raise RuntimeError(f"Java compilation failed:\n{process.stderr}")

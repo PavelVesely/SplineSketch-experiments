@@ -16,7 +16,7 @@ SUITES = ["synthetic", "real", "update", "query", "merge", "heavy", "ablation"]
 def parser():
     p = argparse.ArgumentParser(description="Reproduce SplineSketch experimental results (DOI 10.1145/3769827).")
     commands = p.add_subparsers(dest="command", required=True)
-    commands.add_parser("setup", help="Create .venv, install compatible Python dependencies and compile Java (requires JDK 17)")
+    commands.add_parser("setup", help="Create .venv, install compatible Python dependencies and compile Java (requires java and javac 17+)")
     commands.add_parser("build", help="Compile all Java programs")
     doctor = commands.add_parser("doctor", help="Check dependencies, bundled JAR hashes and compiled wrappers")
     doctor.add_argument("--datasets", nargs="+", choices=REAL)
