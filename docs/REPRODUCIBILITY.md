@@ -13,21 +13,28 @@ claims. Badge decisions require independent evaluation. No badge is claimed here
 ## Environment and installation
 
 - JDK 17; validation used Temurin 17.0.16+8. Put its `bin` directory on PATH.
-- Python 3.9–3.12 with venv and pip. Validation used Python 3.9.6 on Apple silicon
+- Python 3.8 or newer with venv and pip (including 3.13 and 3.14). Validation used Python 3.9.6 on Apple silicon
   macOS; the container uses Ubuntu 22.04 Python 3.10.
-- The version-pinned direct/transitive packages in `requirements.txt`.
+- Compatible dependency ranges in `requirements.txt`; pip selects releases
+  for the interpreter. `requirements-pinned.txt` preserves the historical
+  Python 3.9–3.12 direct/transitive package pins and is used by Docker.
 - All Java dependencies are already bundled. `dependency-manifest.json` records
   SHA-256 identities and upstream projects. Snapshot JAR source commits are not
   known; the exact binary artifacts are retained rather than silently rebuilt.
 - Headless Matplotlib uses the Agg backend and a writable local cache. No GUI,
   GPU, cloud credentials, or interactive plotting is needed.
 
-`python3 reproduce.py setup` creates `.venv`, installs the pins, compiles Java,
+`python3 reproduce.py setup` creates `.venv`, installs compatible dependencies, compiles Java,
 and runs `doctor`. If prerequisites are missing, install them before retrying.
 `make` remains available for Java-only compilation; the Python `build` command
 also works without Make and builds all wrappers with explicit UTF-8 encoding.
 
-`doctor` validates JDK availability, Python package pins, JAR hashes and compiled
+No upper Python version is enforced; future versions require compatible upstream
+packages. Only Python 3.9 has been tested locally. Preserve the exact environment
+with `python -m pip freeze > requirements-local.txt`; run metadata records direct
+dependency versions.
+
+`doctor` validates JDK availability, Python package requirements, JAR hashes and compiled
 wrapper presence. `doctor --datasets power` validates existing data without
 initiating downloads. Native Windows uses the Python commands and portable
 classpaths, but is not yet tested. `resource` memory counters are unavailable on

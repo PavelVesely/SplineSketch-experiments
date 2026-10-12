@@ -13,7 +13,7 @@ are saved under `results/<run>/figures/`.
 
 ## Start with a smoke run
 
-Install **JDK 17** (`java` and `javac` on PATH) and **Python 3.9–3.12**, then:
+Install **JDK 17** (`java` and `javac` on PATH) and **Python 3.8 or newer**, then:
 
 ```sh
 git clone https://github.com/PavelVesely/SplineSketch-experiments.git
@@ -44,6 +44,15 @@ docker run --rm \
   -v "$PWD/.cache:/artifact/.cache" \
   splinesketch-artifact run --profile smoke
 ```
+
+Setup uses dependency ranges so pip can select releases for Python 3.8–3.14,
+including Python 3.13. There is no hard upper Python version limit; newer
+interpreters depend on upstream package support. Local validation used Python
+3.9; other versions need the same tests before relying on results.
+For the historical Python 3.9–3.12 package versions, install
+`requirements-pinned.txt` in a virtual environment. Actual direct dependency
+versions are recorded in each run's metadata. To preserve the entire environment,
+save `python -m pip freeze > requirements-local.txt` alongside your results.
 
 The Dockerfile fixes Temurin to JDK 17.0.16+8 and pins Python packages. Its Ubuntu
 OS packages are obtained from the distribution repositories at build time.

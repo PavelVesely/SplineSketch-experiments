@@ -11,6 +11,24 @@ from reproduction.java import check_java, compile_java, run_java
 from reproduction.plots import curve_points
 
 
+class PythonCompatibilityTests(unittest.TestCase):
+    def test_setup_accepts_old_and_new_interpreters(self):
+        from unittest.mock import patch
+        from reproduction.cli import setup
+        for version in ((3, 8), (3, 9), (3, 13), (3, 14), (3, 15)):
+            with self.subTest(version=version), \
+                    patch("reproduction.cli.sys.version_info", version), \
+                    patch("reproduction.cli.subprocess.run") as run, \
+                    patch("builtins.print"):
+                setup()
+                self.assertEqual(run.call_count, 4)
+        with patch("reproduction.cli.sys.version_info", (3, 7)), \
+                patch("reproduction.cli.subprocess.run") as run:
+            with self.assertRaisesRegex(RuntimeError, "3.8 or newer"):
+                setup()
+            run.assert_not_called()
+
+
 class WorkloadTests(unittest.TestCase):
     def test_historical_heavy_workload_keeps_extra_normal_segment(self):
         data = generate("normal_and_distinct_42", 1000, 123)

@@ -16,7 +16,7 @@ SUITES = ["synthetic", "real", "update", "query", "merge", "heavy", "ablation"]
 def parser():
     p = argparse.ArgumentParser(description="Reproduce SplineSketch experimental results (DOI 10.1145/3769827).")
     commands = p.add_subparsers(dest="command", required=True)
-    commands.add_parser("setup", help="Create .venv, install pinned Python dependencies and compile Java (requires JDK 17)")
+    commands.add_parser("setup", help="Create .venv, install compatible Python dependencies and compile Java (requires JDK 17)")
     commands.add_parser("build", help="Compile all Java programs")
     doctor = commands.add_parser("doctor", help="Check dependencies, bundled JAR hashes and compiled wrappers")
     doctor.add_argument("--datasets", nargs="+", choices=REAL)
@@ -98,7 +98,7 @@ def doctor(args):
         requirement = Requirement(line)
         if requirement.marker is None or requirement.marker.evaluate():
             if version(requirement.name) not in requirement.specifier:
-                raise ValueError(f"Dependency version mismatch: {line}. Run python reproduce.py setup")
+                raise ValueError(f"Dependency requirement mismatch: {line}. Run python reproduce.py setup")
     manifest = load_json(ROOT / "dependency-manifest.json")
     for name, entry in manifest["jars"].items():
         if digest(ROOT / name) != entry["sha256"]:
@@ -161,8 +161,8 @@ def run(args):
 
 def setup():
     # The environment is local to the checkout and does not change system packages.
-    if not (3, 9) <= sys.version_info[:2] <= (3, 12):
-        raise RuntimeError("Use Python 3.9–3.12 for the pinned artifact environment")
+    if sys.version_info[:2] < (3, 8):
+        raise RuntimeError("Use Python 3.8 or newer")
     subprocess.run([sys.executable, "-m", "venv", str(ROOT / ".venv")], check=True)
     executable = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     subprocess.run([str(executable), "-m", "pip", "install", "-r", str(ROOT / "requirements.txt")], check=True)
