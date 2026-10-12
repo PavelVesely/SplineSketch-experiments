@@ -24,6 +24,19 @@ public class KLLProgram {
         String outputFile = args[3];
         int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
+        // Seed the package-private RNG of the pinned DataSketches 6.0.0 JAR.
+        // This changes only random choices, not the sketch algorithm.
+        String seed = System.getProperty("splinesketch.seed");
+        if (seed != null) {
+            try {
+                java.lang.reflect.Field randomField = org.apache.datasketches.kll.KllSketch.class.getDeclaredField("random");
+                randomField.setAccessible(true);
+                ((java.util.Random) randomField.get(null)).setSeed(Long.parseLong(seed));
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("Cannot seed pinned KLL implementation", e);
+            }
+        }
+
         try {
             ////////////// load data and queries /////////////////
             List<Double> data = new ArrayList<>();

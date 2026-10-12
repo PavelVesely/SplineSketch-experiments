@@ -1,105 +1,84 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import subprocess
-import bisect
-import math
-import uuid
+"""Backward-compatible sketch functions backed by the validated Java runner."""
 import os
+import shlex
+import subprocess
 import time
+from pathlib import Path
 
-# Define the sketch classes to compare
+import numpy as np
 
+from helper_funcs import load_floats_from_file
+from reproduction.java import run_java
 from spline_sketch_uniform import SplineSketchUniform
 
-from helper_funcs import *
-
-import csv
-
-# FUNCTIONS FOR EXECUTING THE SKETCHES
-######################################
 
 def run_program_parse_stdout_and_outputFile(command, output_file, n):
-    output = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-    # Split the output into lines and parse the integers
-    output_lines = output.stdout.strip().split('\n')
-    integers = [int(line.strip()) for line in output_lines]
-    if len(integers) != 3: 
-        raise Exception(f"EXPECTED 3 INTEGERS but output of running {command} is {output.stdout}")
-    size, updateTime, queryTime = integers[0], integers[1], integers[2]
-
-    # Read the output file and convert it to an array
-    with open(output_file, 'r') as f_out:
-        results = np.array([int(line.strip()) for line in f_out])
-    os.remove(output_file)
-
-    return results, size, updateTime, queryTime
+    """Legacy API; execute arguments directly, never through a shell."""
+    try:
+        process = subprocess.run(shlex.split(command) if isinstance(command, str) else command,
+                                 check=True, text=True, capture_output=True)
+        metrics = [int(line) for line in process.stdout.strip().splitlines()]
+        if len(metrics) != 3 or metrics[0] <= 0 or min(metrics[1:]) < 0:
+            raise ValueError(f"Expected size and two times, got {process.stdout}")
+        with open(output_file) as stream:
+            results = np.fromiter((int(line) for line in stream), dtype=np.int64)
+        return results, *metrics
+    finally:
+        Path(output_file).unlink(missing_ok=True)
 
 
-def run_splinesketch_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "splinesketch_" + uuid.uuid4().hex
-    
-    command = f"java SplineSketchProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+def _run(sketch, dataFile, queriesFile, n, size, parts, tmpPath, params=None):
+    ranks, metrics, _ = run_java(sketch, dataFile, queriesFile, n, size, parts, params,
+        heap=os.environ.get("SPLINESKETCH_JAVA_HEAP", "1g"),
+        timeout=int(os.environ.get("SPLINESKETCH_JAVA_TIMEOUT", "86400")),
+        tmp_dir=tmpPath)
+    return ranks, *metrics
 
 
-def run_splinesketchMG_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "splinesketchMG_" + uuid.uuid4().hex
-    
-    command = f"java SplineSketchMGProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+def run_splinesketch_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("splinesketch", dataFile, queriesFile, n, sketch_size, num_parts, tmpPath)
 
-# HACK: using print_info for other arguments...
-def run_splinesketchAdjustable_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "splinesketchAdjustable_" + uuid.uuid4().hex
-    
-    command = f"java SplineSketchAdjustableProgram {dataFile} {queriesFile} {sketch_size} {output_file} {num_parts} {print_info}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_tdigest(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "t-digest_" + uuid.uuid4().hex
+def run_splinesketchMG_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("splinesketch_mg", dataFile, queriesFile, n, sketch_size, num_parts, tmpPath)
 
-    # unfortunatley t-digest does not really have the desired size, so we need to adjust its compression parameter
-    adjusted_size = 5 * sketch_size / 3
-    adjusted_size = max(10, adjusted_size)
-    
-    command = f"java -cp .:t-digest-3.3.jar TDigestProgram {dataFile} {queriesFile} {adjusted_size} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_MomentSketch(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "MomentSketch_" + uuid.uuid4().hex
+def run_splinesketchAdjustable_java(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath="./output_files/"):
+    params = shlex.split(print_info) if isinstance(print_info, str) else print_info
+    return _run("adjustable", dataFile, queriesFile, n, sketch_size, num_parts, tmpPath, params)
 
-    command = f"java -Xmx100g -cp .:msolver-1.0-SNAPSHOT.jar:quantile-bench-1.0-SNAPSHOT.jar:commons-math3-3.6.1.jar MomentSketchProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_kll(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "KLL_" + uuid.uuid4().hex
-    
-    command = f"java -cp .:datasketches-java-6.0.0.jar:datasketches-memory-2.2.1.jar KLLProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+def run_tdigest(dataFile, queriesFile, n, sketch_size, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("tdigest", dataFile, queriesFile, n, sketch_size, num_parts, tmpPath)
 
-def run_GK(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "GK_" + uuid.uuid4().hex
-    
-    command = f"java GKProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
 
-def run_DDSketch(dataFile, queriesFile, n,k, num_parts, print_info, tmpPath='./output_files/'): #
-    output_file = tmpPath + "DDS_" + uuid.uuid4().hex
-    
-    command = f"java -cp .:sketches-java-0.8.3.jar  DDSketchProgram {dataFile} {queriesFile} {k} {output_file} {num_parts}"
-    return run_program_parse_stdout_and_outputFile(command, output_file, n)
+def run_MomentSketch(dataFile, queriesFile, n, k, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("moments", dataFile, queriesFile, n, k, num_parts, tmpPath)
 
-# Python version of SplineSketch
+
+def run_kll(dataFile, queriesFile, n, k, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("kll", dataFile, queriesFile, n, k, num_parts, tmpPath)
+
+
+def run_GK(dataFile, queriesFile, n, k, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("gk", dataFile, queriesFile, n, k, num_parts, tmpPath)
+
+
+def run_DDSketch(dataFile, queriesFile, n, k, num_parts, print_info, tmpPath="./output_files/"):
+    return _run("ddsketch", dataFile, queriesFile, n, k, num_parts, tmpPath)
+
+
 def run_splineSketchUniform(dataFile, queriesFile, n, sketch_size, num_parts, print_info=""):
+    if num_parts != 1:
+        raise ValueError("Python sketch wrapper supports streaming only")
     data = load_floats_from_file(dataFile)
     queries = load_floats_from_file(queriesFile)
-    start_time = time.perf_counter_ns()
+    start = time.perf_counter_ns()
     sketch = SplineSketchUniform(sketch_size, print_info)
     for x in data:
         sketch.update(x)
     sketch.consolidate()
-    after_updates_time = time.perf_counter_ns()
-    estimated_ranks = sketch.query(queries)
-    after_queries_time = time.perf_counter_ns()
-    sketch.print_avg_iters_stats()
-    return estimated_ranks, 12*sketch_size + 8, after_updates_time - start_time, after_queries_time - after_updates_time # 12 bytes per bucket
+    updated = time.perf_counter_ns()
+    ranks = sketch.query(queries)
+    queried = time.perf_counter_ns()
+    return ranks, 12 * sketch_size + 8, updated - start, queried - updated

@@ -1,0 +1,39 @@
+{
+  "jars": {
+    "commons-math3-3.6.1.jar": {
+      "sha256": "1e56d7b058d28b65abd256b8458e3885b674c1d588fa43cd7d1cbb9c7ef2b308",
+      "source": "https://commons.apache.org/proper/commons-math/",
+      "license": "Apache-2.0"
+    },
+    "datasketches-java-6.0.0.jar": {
+      "sha256": "53fbd2f0702b74833ff688c18e4bf77bd68a7a8573d683139d2a63b4f86d4dc5",
+      "source": "https://github.com/apache/datasketches-java",
+      "license": "Apache-2.0"
+    },
+    "datasketches-memory-2.2.1.jar": {
+      "sha256": "d5e048af3b3d6bb683d08206a290028bad420a63df364d21bf42c7d6dc7f55f2",
+      "source": "https://github.com/apache/datasketches-memory",
+      "license": "Apache-2.0"
+    },
+    "msolver-1.0-SNAPSHOT.jar": {
+      "sha256": "612735a31e1ecf5b2a06901ecf8d5e87347d52181035e6cbfcb492ec876c4277",
+      "source": "https://github.com/stanford-futuredata/msketch",
+      "license": "Apache-2.0 (upstream; snapshot commit unknown)"
+    },
+    "quantile-bench-1.0-SNAPSHOT.jar": {
+      "sha256": "b5aa62e678ee5c9a650f42e67ee2edf4279aa5bbfb316f957622ed1138d54173",
+      "source": "https://github.com/stanford-futuredata/msketch",
+      "license": "Apache-2.0 (upstream; snapshot commit unknown)"
+    },
+    "sketches-java-0.8.3.jar": {
+      "sha256": "2626b1900c427c87349dd2b03238fb6151f91340c4c753011569620b289af0a1",
+      "source": "https://github.com/DataDog/sketches-java",
+      "license": "Apache-2.0"
+    },
+    "t-digest-3.3.jar": {
+      "sha256": "dc8be5228e0733e12fbe35eeffb6f720dff576bb2eb5dee69c1c211adcd7aeb9",
+      "source": "https://github.com/tdunning/t-digest",
+      "license": "Apache-2.0"
+    }
+  }
+}

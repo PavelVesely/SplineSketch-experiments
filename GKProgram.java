@@ -22,6 +22,9 @@ public class GKProgram {
         String queryFile = args[1];
         int k = Integer.parseInt(args[2]);
         String outputFile = args[3];
+        if (args.length == 5 && Integer.parseInt(args[4]) != 1) {
+            throw new IllegalArgumentException("GKAdaptive merge is not implemented; see TODO.md");
+        }
 
         try {
             ////////////// load data and queries /////////////////

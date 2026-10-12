@@ -77,7 +77,8 @@ public class MomentSketchProgram {
                     sketches[j] = new CMomentSketch(1e-9); // use default tolerance
                     sketches[j].setSizeParam(k);
                     sketches[j].initialize();
-                    double[] sub = Arrays.copyOfRange(arr, i, Math.min(i+partSize, n));
+                    // The last chunk includes any remainder; no input is dropped.
+                    double[] sub = Arrays.copyOfRange(arr, i, j == num_parts - 1 ? n : Math.min(i+partSize, n));
                     i += partSize;
                     sketches[j].add(sub);
                 }
