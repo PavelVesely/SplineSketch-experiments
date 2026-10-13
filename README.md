@@ -80,6 +80,19 @@ the full suite; 256 GB RAM gives more headroom for Books. These are conservative
 planning estimates, not measured minima. Runtime is not yet measured for the
 full suite. The paper used an AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD.
 
+For reduced workloads, choose one of the additional profiles:
+
+| Profile | Synthetic accuracy input size | Queries | Java heap per job | Real datasets |
+| --- | ---: | ---: | --- | --- |
+| [`paper-small`](configs/paper-small.json) | 1 million | 1,000 | 20 GB | Power |
+| [`paper-smaller`](configs/paper-smaller.json) | 10 million | 10,000 | 50 GB | HEPMASS, Power |
+
+Run with `--profile paper-small` or `--profile paper-smaller`; add `--dry-run`
+to preview the workload or `--download` to fetch required datasets. These
+profiles use the full selected real datasets; timing sweeps have their own
+input sizes. Despite its name, the current `paper-smaller` configuration is
+larger than `paper-small`. Both are smaller than `paper`.
+
 All currently supported curves are automated. **GKAdaptive merge curves in
 Figure 8 remain unavailable** because the repository has no GK merge
 implementation. The author follow-up is isolated in [TODO.md](TODO.md); generated
@@ -120,7 +133,19 @@ instructions, see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).
 
 [configs/paper.json](configs/paper.json) contains published-scale settings.
 [configs/smoke.json](configs/smoke.json) contains the small validation workload.
-CLI options override either profile; `--config path.json` overlays JSON fields.
+[configs/paper-small.json](configs/paper-small.json) and
+[configs/paper-smaller.json](configs/paper-smaller.json) provide additional
+workloads, selectable with `--profile paper-small` or `--profile paper-smaller`.
+Outputs default to `results/<profile>`. Preview or run them with:
+
+```sh
+.venv/bin/python reproduce.py run --profile paper-small --dry-run
+.venv/bin/python reproduce.py run --profile paper-smaller --dry-run
+.venv/bin/python reproduce.py run --profile paper-small --download
+.venv/bin/python reproduce.py run --profile paper-smaller --download
+```
+
+CLI options override any profile; `--config path.json` overlays JSON fields.
 For example:
 
 ```sh
