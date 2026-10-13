@@ -1,7 +1,8 @@
-.PHONY: all setup doctor smoke reproduce plots test archive compile_SplineSketch compile_SplineSketchMG compile_SplineSketchAdjustable compile_tdigest compile_MS compile_KLL compile_GK compile_DDS
+.PHONY: all setup doctor smoke reproduce plots paper test archive compile_SplineSketch compile_SplineSketchMG compile_SplineSketchAdjustable compile_tdigest compile_MS compile_KLL compile_GK compile_DDS
 
 SHELL := /bin/bash
 PYTHON ?= .venv/bin/python
+PROFILE ?= paper
 JAVAC ?= javac
 
 all: compile_SplineSketch compile_SplineSketchMG compile_SplineSketchAdjustable compile_tdigest compile_MS compile_KLL compile_GK compile_DDS
@@ -44,6 +45,9 @@ reproduce:
 
 plots:
 	$(PYTHON) reproduce.py plot --output results/paper
+
+paper:
+	$(PYTHON) scripts/build_paper.py --profile $(PROFILE)
 
 test:
 	$(PYTHON) -m unittest discover -s tests -v

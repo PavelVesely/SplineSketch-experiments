@@ -123,6 +123,35 @@ For complete figure mapping, expected trends, experiment protocols, workload
 details, dataset preprocessing, resource estimates, and artifact submission
 instructions, see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).
 
+## Build the paper PDF
+
+Install a TeX distribution providing `latexmk`, `pdflatex`, `bibtex`, and the
+packages used by `paper/splineSketchCameraReady.tex` (for example, MacTeX or
+TeX Live). After running a profile, build the paper with its saved measurements:
+
+```sh
+.venv/bin/python scripts/build_paper.py --profile paper-small
+# Equivalent shortcut:
+make paper PROFILE=paper-small
+```
+
+The PDF is written to `results/paper-small/paper/splineSketchCameraReady.pdf`.
+The script regenerates individual plots with the filenames expected by the
+TeX sources, stages the sources and static diagrams, and runs `latexmk` to
+resolve the bibliography and cross-references. It uses saved records and needs
+no Java or original datasets. It does not run experiments. Sources in `paper/`
+and historical plots in `plots/` remain unchanged.
+
+Use `--results path/to/run` for a run created with a custom `--output`, and
+`--output path/to/build` to choose a different PDF build directory. Relative
+paths are resolved from the current working directory; defaults are relative
+to the repository. Missing datasets or suites produce labeled placeholder
+panels, including when building from `smoke`. Failed measurements are excluded
+from curves. `paper-build.json` records the effective run configuration,
+missing panels, and failure counts; `latexmk.log` contains compiler output.
+The paper's prose and captions retain the published workload descriptions,
+so PDFs using reduced profiles are for comparison and inspection.
+
 ## Configure or extend experiments
 
 ```sh
