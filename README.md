@@ -85,13 +85,13 @@ For reduced workloads, choose one of the additional profiles:
 | Profile | Synthetic accuracy input size | Queries | Java heap per job | Real datasets |
 | --- | ---: | ---: | --- | --- |
 | [`paper-small`](configs/paper-small.json) | 1 million | 1,000 | 20 GB | Power |
-| [`paper-smaller`](configs/paper-smaller.json) | 10 million | 10,000 | 50 GB | HEPMASS, Power |
+| [`paper-medium`](configs/paper-medium.json) | 10 million | 10,000 | 50 GB | HEPMASS, Power |
 
-Run with `--profile paper-small` or `--profile paper-smaller`; add `--dry-run`
+Run with `--profile paper-small` or `--profile paper-medium`; add `--dry-run`
 to preview the workload or `--download` to fetch required datasets. These
 profiles use the full selected real datasets; timing sweeps have their own
-input sizes. Despite its name, the current `paper-smaller` configuration is
-larger than `paper-small`. Both are smaller than `paper`.
+input sizes. The `paper-medium` configuration is larger than `paper-small`;
+both are smaller than `paper`.
 
 All currently supported curves are automated. **GKAdaptive merge curves in
 Figure 8 remain unavailable** because the repository has no GK merge
@@ -163,15 +163,15 @@ so PDFs using reduced profiles are for comparison and inspection.
 [configs/paper.json](configs/paper.json) contains published-scale settings.
 [configs/smoke.json](configs/smoke.json) contains the small validation workload.
 [configs/paper-small.json](configs/paper-small.json) and
-[configs/paper-smaller.json](configs/paper-smaller.json) provide additional
-workloads, selectable with `--profile paper-small` or `--profile paper-smaller`.
+[configs/paper-medium.json](configs/paper-medium.json) provide additional
+workloads, selectable with `--profile paper-small` or `--profile paper-medium`.
 Outputs default to `results/<profile>`. Preview or run them with:
 
 ```sh
 .venv/bin/python reproduce.py run --profile paper-small --dry-run
-.venv/bin/python reproduce.py run --profile paper-smaller --dry-run
+.venv/bin/python reproduce.py run --profile paper-medium --dry-run
 .venv/bin/python reproduce.py run --profile paper-small --download
-.venv/bin/python reproduce.py run --profile paper-smaller --download
+.venv/bin/python reproduce.py run --profile paper-medium --download
 ```
 
 CLI options override any profile; `--config path.json` overlays JSON fields.

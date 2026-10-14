@@ -29,7 +29,7 @@ def parser():
     plot.add_argument("--output", type=Path, required=True, help="Existing experiment output directory")
     plot.add_argument("--figures", nargs="+", choices=["1", "4", "5", "6", "7", "8", "9", "10"])
     run = commands.add_parser("run", help="Generate inputs, execute measurements and plot (matching runs resume automatically)")
-    run.add_argument("--profile", choices=["smoke", "paper", "paper-small", "paper-smaller"], default="smoke",
+    run.add_argument("--profile", choices=["smoke", "paper", "paper-small", "paper-medium"], default="smoke",
                      help="Load configs/<profile>.json (default: smoke)")
     run.add_argument("--config", type=Path, help="JSON overrides on top of the profile")
     run.add_argument("--suite", nargs="+", choices=SUITES, default=SUITES)
