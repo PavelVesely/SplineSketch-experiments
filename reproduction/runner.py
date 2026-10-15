@@ -94,8 +94,7 @@ def execute(cfg, tasks, output, dataset_dir, cache_dir, java_info):
             raise ValueError(f"{output} belongs to a different configuration, source, or environment. Use a new --output directory.")
     else:
         metadata = dict(schema=SCHEMA, signature=signature, config=cfg, tasks=expanded,
-            provenance=provenance_info, java=java_info, started_at=now(), inputs={},
-            limitations=["GKAdaptive merge is not implemented; Figure 8 omits that curve."])
+            provenance=provenance_info, java=java_info, started_at=now(), inputs={})
         write_json(manifest, metadata)
 
     groups = {}

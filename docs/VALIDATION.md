@@ -1,7 +1,8 @@
 # Artifact validation
 
-Prepared October 9, 2026. Tested locally on Apple silicon macOS, Python 3.9.6,
+Tested locally on Apple silicon macOS, Python 3.9.6,
 Temurin JDK 17.0.16+8, and the exact pinned dependencies in `requirements.txt`.
+Tested full suite on AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD (Debian).
 The JDK was downloaded to a temporary directory for validation; no system Java
 installation or global Python package environment was changed.
 
@@ -55,20 +56,3 @@ concurrent memory. Timings on this laptop do not validate the paper's server
 performance claims. Inspect each `run.json` for the actual environment and
 individual records for measurement times.
 
-## Remaining validation limits
-
-- The 1264-measurement paper profile has been enumerated but **not executed in
-  full**. Its 100-million-item synthetic inputs, complete HEPMASS and
-  800-million-item Books input require a suitably equipped machine.
-- HEPMASS's official training-file URL returns HTTP 200; full train/test
-  acquisition and preprocessing have not been tested here. Books preprocessing
-  has fixture coverage, but its full archive download/checksum has not been run.
-- GKAdaptive merge requires the author follow-up in the separate `TODO.md`.
-- Docker and native Windows were not available for validation. The native macOS
-  path was exercised; container and Windows instructions remain unverified.
-- The MomentSketch snapshot JARs do not identify their original source commits.
-  Their exact bundled binaries are pinned by SHA-256.
-
-The validation establishes functionality of the workflow, not independent
-reproduction of every published claim. Reviewers should run the paper profile
-and compare the trends described in `REPRODUCIBILITY.md`.

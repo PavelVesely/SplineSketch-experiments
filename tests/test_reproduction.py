@@ -87,7 +87,7 @@ class WorkloadTests(unittest.TestCase):
         tasks = plan(cfg, ["merge", "update"])
         self.assertEqual({t["dataset"] for t in tasks if t["suite"] == "merge"}, {"normal", "hepmass"})
         self.assertTrue(all(t["parts"] == 10000 for t in tasks if t["suite"] == "merge"))
-        self.assertFalse(any(t["sketch"] == "gk" and t["suite"] == "merge" for t in tasks))
+        self.assertTrue(any(t["sketch"] == "gk" and t["suite"] == "merge" for t in tasks))
         self.assertEqual({t["parameter"] for t in tasks if t["sketch"] == "moments" and t["suite"] == "update"}, {15})
 
     def test_plot_sort_keeps_size_and_error_paired(self):
@@ -212,9 +212,8 @@ class JavaTests(unittest.TestCase):
             self.assertLess(merged[0], len(values) - 1)
 
     def test_unsupported_merge_is_rejected(self):
-        for sketch in ("gk", "splinesketch_mg"):
-            with self.subTest(sketch=sketch), self.assertRaisesRegex(ValueError, "merge is unavailable"):
-                run_java(sketch, "unused", "unused", 1000, 100, parts=10)
+        with self.assertRaisesRegex(ValueError, "merge is unavailable"):
+            run_java("splinesketch_mg", "unused", "unused", 1000, 100, parts=10)
 
 
 if __name__ == "__main__":

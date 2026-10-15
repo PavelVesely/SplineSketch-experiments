@@ -75,7 +75,7 @@ def run_java(sketch, data, queries, n, parameter, parts=1, params=None,
         raise ValueError("Java heap must be a positive size, e.g. 1g or 100g")
     if n <= 0 or parts <= 0 or parts > n:
         raise ValueError("Merge partitions must satisfy 1 <= parts <= actual input size")
-    if parts != 1 and sketch in ("gk", "splinesketch_mg"):
+    if parts != 1 and sketch == "splinesketch_mg":
         raise ValueError(f"{LABELS[sketch]} merge is unavailable in this repository")
     program, jars = PROGRAMS[sketch]
     classpath = os.pathsep.join([str(program_directory(program))] + [str(ROOT / jar) for jar in jars])

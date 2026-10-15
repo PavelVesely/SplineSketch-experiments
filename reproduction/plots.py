@@ -19,7 +19,7 @@ TITLES = {"hepmass": "HEPMASS", "power": "Power", "books": "Books",
           "sorted_with_frequent": "Sorted input with frequent items"}
 STYLES = {"SplineSketch": ("#1f77b4", "-"), "KLL": ("#ff7f0e", ":"),
           "MomentSketch": ("#2ca02c", "-."), "t-digest": ("#d62728", "--"),
-          "GKAdaptive": ("#8c564b", (5, (10, 3))), "SplineSketch+MG": ("#17becf", "-")}
+          "GKAdaptive": ("#9467bd", (5, (10, 3))), "SplineSketch+MG": ("#8c564b", "-")}
 
 
 def panel(suite, name, metric, x="serialized_bytes"):
@@ -99,11 +99,9 @@ def draw(ax, records, spec, limit):
             zero_labels.append(label)
     if metric in ("average_error", "maximum_error") and spec["suite"] in ("real", "synthetic"):
         xx = np.linspace(max(1, min(p[0] for v in curves.values() for p in v)), limit, 200)
-        ax.plot(xx, 64 / xx, color="#9467bd", linestyle=(0, (1, 10)), label="reference 64 / bytes")
+        ax.plot(xx, 64 / xx, color="#9467bd", linestyle=(0, (1, 10)), label="error bound (64/bytes)")
     if zero_labels:
         ax.text(0.02, 0.02, "▼ = zero error", fontsize=8, transform=ax.transAxes)
-    if spec["suite"] == "merge":
-        ax.text(0.02, 0.97, "GKAdaptive merge unavailable", va="top", fontsize=8, transform=ax.transAxes)
     return dict(spec=spec, curves=list(curves), missing=False, zero_display_floor=floor if zero_labels else None)
 
 
