@@ -12,9 +12,8 @@ public class GKProgram {
     static List<Double> data;
 
     public static void main(String[] args) {
-        // NOTE: mergeability test not implemented here --- no merge op. in our implementation of GK
         if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java GKProgram <dataset_file> <query_file> <k> <output_file>");
+            System.out.println("Usage: java GKProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
             return;
         }
 
@@ -22,9 +21,7 @@ public class GKProgram {
         String queryFile = args[1];
         int k = Integer.parseInt(args[2]);
         String outputFile = args[3];
-        if (args.length == 5 && Integer.parseInt(args[4]) != 1) {
-            throw new IllegalArgumentException("GKAdaptive merge is not implemented; see TODO.md");
-        }
+        int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
@@ -61,12 +58,38 @@ public class GKProgram {
             ////////////// measure time from here /////////////////
             long startTime = System.nanoTime();
 
-            // Create GKSketch with the given compression parameter
-            GK gk = new GK(3.0/(2*k)); // FIXME: which epsilon to choose?
-            for (int i = 0; i < data.size(); i++) {
-                gk.feed(data.get(i));
+            GK gk;
+            if (num_parts == 1) { // streaming
+                // Create GKSketch with the given compression parameter
+                gk = new GK(3.0/(2*k)); // empirically a good choice of epsilon
+                for (int i = 0; i < data.size(); i++) {
+                    gk.feed(data.get(i));
+                }
+                gk.finalize();
             }
-            gk.finalize();
+            else {
+                int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
+                GK[] sketches = new GK[num_parts];
+                for (int j = 0; j < num_parts; j++) {
+                    sketches[j] = new GK(3.0/(2*k));
+                }
+                // create individual sketches
+                int j = 0;
+                for (int i = 0; i < n; i++) {
+                    sketches[j].feed(data.get(i));
+                    if (i % partSize == partSize - 1 && j < num_parts - 1) j++;
+                }
+                ////////////// measure time from here /////////////////
+                startTime = System.nanoTime();
+                // merging
+                for (int step = 1; step < num_parts; step *= 2) {
+                    for (j = 0; j < num_parts - step; j += 2*step) {
+                        sketches[j].merge(sketches[j+step]);
+                        sketches[j+step] = null;
+                    }
+                }
+                gk = sketches[0];
+            }
             long afterUpdatesTime = System.nanoTime();
 
             List<Long> results = new ArrayList<>();
