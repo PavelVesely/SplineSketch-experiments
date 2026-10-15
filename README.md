@@ -9,7 +9,12 @@ The artifact builds the Java implementations, generates or downloads inputs,
 executes experiments, saves raw rank estimates and measurements, and produces
 the experimental figures in the published paper. Existing PDFs in `plots/` are
 historical reference plots and are never overwritten. Newly reproduced figures
-are saved under `results/<run>/figures/`.
+are saved under `results/<run>/figures/`. Finally, it is possible to build a version of the published paper with
+the generated figures.
+
+
+
+
 
 ## Start with a smoke run
 
@@ -318,7 +323,6 @@ The five original `run_experiments_*.py` filenames are compatibility entry point
 to the corresponding configurable suite, using the smoke profile by default.
 Use `--profile paper` for the original-scale workloads. The older exploratory
 `scripts/test_merge.py` is not a validation test or the supported reproduction entry point.
-It now raises an error when requesting unsupported GKAdaptive/MG merging.
 
 Java sources and compiled classes live in `java/splinesketch/` (SplineSketch
 variants) and `java/other_sketches/` (comparison sketches).
