@@ -99,7 +99,7 @@ def draw(ax, records, spec, limit):
             zero_labels.append(label)
     if metric in ("average_error", "maximum_error") and spec["suite"] in ("real", "synthetic"):
         xx = np.linspace(max(1, min(p[0] for v in curves.values() for p in v)), limit, 200)
-        ax.plot(xx, 64 / xx, color="#9467bd", linestyle=(0, (1, 10)), label="reference 64 / bytes")
+        ax.plot(xx, 64 / xx, color="#9467bd", linestyle=(0, (1, 10)), label="error bound (64/bytes)")
     if zero_labels:
         ax.text(0.02, 0.02, "▼ = zero error", fontsize=8, transform=ax.transAxes)
     if spec["suite"] == "merge":
