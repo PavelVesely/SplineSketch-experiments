@@ -2,13 +2,13 @@
 
 Reference: *SplineSketch: Even More Accurate Quantiles with Error Guarantees* [DOI 10.1145/3769827](https://doi.org/10.1145/3769827), PACMMOD 3(6),
 Article 362, December 2025. The experiment mapping below follows the **published
-26-page PDF**, not the differently numbered arXiv draft. The PDF is not bundled.
+26-page PDF**, not the differently numbered arXiv draft.
 
 This artifact follows the [SIGMOD 2026 call](https://reproducibility.sigmod.org/2026/)
 and [SIGMOD packaging guidelines](https://reproducibility.sigmod.org/): declared
 dependencies, automatic setup, generated or downloadable inputs, configurable
 experiments, raw measurements, plotting scripts, sanity checks, and documented
-claims. Badge decisions require independent evaluation. No badge is claimed here.
+claims.
 
 ## Environment and installation
 
@@ -287,9 +287,3 @@ The repository lacks the paper's LaTeX sources, so automatic recompilation of
 the paper PDF is outside this artifact's scope; generated figure PDFs can be
 included in those sources separately.
 
-Publish the source archive under a persistent versioned URL (e.g. an archival
-repository DOI), add it to the README and ARI submission, select the badges to be
-evaluated, and provide access credentials if needed. The SIGMOD 2026 artifact
-submission deadline listed on the call is October 15, 2026. Registration and
-submission are author actions; this workflow prepares an archive but does not
-register, upload, or publish it. Follow the live call for final submission details.
