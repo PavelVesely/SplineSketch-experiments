@@ -13,7 +13,7 @@ are saved under `results/<run>/figures/`. Finally, it is possible to build a ver
 the generated figures.
 
 *A lot of content here is AI-generated from the 2025 version of this repository, but manually checked and tested by the author.
-The thorough AI check revealed certain discrepancies between the experimental pipeline and the paper's description (which was the author intention); these discrepancies are described in [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md), are preserved in the repository to facilitate reproducibility of the paper's content, and do not invalidate the central claims in the paper or the proposed algorithm's behavior or correctness.*
+The thorough AI check revealed two discrepancies between the experimental pipeline and the paper's description (which was the author intention); these discrepancies are described in [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md), are preserved in the repository to facilitate reproducibility of the paper's content, and do not invalidate the central claims in the paper or the proposed algorithm's behavior or correctness.*
 
 
 
@@ -36,8 +36,7 @@ report in [docs/VALIDATION.md](docs/VALIDATION.md).
 
 On Windows use `.venv\Scripts\python.exe` instead of `.venv/bin/python`.
 The Python CLI constructs classpaths and subprocess arguments portably; the
-Makefile and shell shortcut are intended for Linux/macOS. Native Windows and
-the Docker image have not yet been validated on this checkout.
+Makefile and shell shortcut are intended for Linux/macOS.
 
 Alternatively, build the container and retain all output in mounted directories:
 
@@ -340,9 +339,9 @@ prototype; comparisons in the published paper use Java.
 This creates `results/splinesketch-artifact.zip` with source, configuration,
 bundled JARs, third-party notices, documentation, tests, historical plots and a
 SHA-256 file manifest. It excludes environments, downloaded datasets, input
-caches, and generated runs. Archive selected generated runs separately if desired.
-Publish a versioned archive at a persistent public URL and link it in the ARI
-submission. Packaging does not publish anything or claim an ACM badge.
+caches, and generated runs. 
+
+## Licenses
 
 The repository's original code is MIT licensed. Bundled dependencies and
 datasets retain their own licenses; see [third_party/README.md](third_party/README.md)
