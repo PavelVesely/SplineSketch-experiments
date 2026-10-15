@@ -19,7 +19,7 @@ TITLES = {"hepmass": "HEPMASS", "power": "Power", "books": "Books",
           "sorted_with_frequent": "Sorted input with frequent items"}
 STYLES = {"SplineSketch": ("#1f77b4", "-"), "KLL": ("#ff7f0e", ":"),
           "MomentSketch": ("#2ca02c", "-."), "t-digest": ("#d62728", "--"),
-          "GKAdaptive": ("#8c564b", (5, (10, 3))), "SplineSketch+MG": ("#17becf", "-")}
+          "GKAdaptive": ("#9467bd", (5, (10, 3))), "SplineSketch+MG": ("#8c564b", "-")}
 
 
 def panel(suite, name, metric, x="serialized_bytes"):
