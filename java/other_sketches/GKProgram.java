@@ -3,30 +3,29 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Arrays;
 
+import java.util.*;
 
-public class KLLProgram {
+public class GKProgram {
+
+    static double[] arr;
+    static List<Double> data;
 
     public static void main(String[] args) {
         if (args.length < 4 || args.length > 5) {
-            System.out.println("Usage: java KLLProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
+            System.out.println("Usage: java GKProgram <dataset_file> <query_file> <k> <output_file> <num_parts (optional)>");
             return;
         }
 
         String datasetFile = args[0];
         String queryFile = args[1];
-        Integer k = Integer.parseInt(args[2]);
+        int k = Integer.parseInt(args[2]);
         String outputFile = args[3];
         int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
 
         try {
             ////////////// load data and queries /////////////////
-            List<Double> data = new ArrayList<>();
+            data = new ArrayList<>();
             // Read the dataset file and add numbers to the SplineSketch
             try (BufferedReader datasetReader = new BufferedReader(new FileReader(datasetFile))) {
                 String line;
@@ -36,15 +35,19 @@ public class KLLProgram {
                 }
             }
             int n = data.size();
+            //arr = new double[data.size()];
+            //for (int i = 0; i < data.size(); i++) {
+            //    arr[i] = data.get(i);
+            //}
             // Read the query file and query the SplineSketch using the cdf method
-            List<Double> queriesLst = new ArrayList<>();
+            List<Double> queries = new ArrayList<>();
 
             try (BufferedReader br = new BufferedReader(new FileReader(queryFile))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     try {
                         double value = Double.parseDouble(line);
-                        queriesLst.add(value);
+                        queries.add(value);
                     } catch (NumberFormatException e) {
                         System.err.println("Skipping invalid float value: " + line);
                     }
@@ -52,32 +55,28 @@ public class KLLProgram {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            double[] queries = new double[queriesLst.size()];
-            for (int i = 0; i < queries.length; i++) {
-                queries[i] = queriesLst.get(i);
-            }
-            
-            long startTime, afterUpdatesTime, afterQueriesTime;
-            org.apache.datasketches.kll.KllDoublesSketch kll;
+            ////////////// measure time from here /////////////////
+            long startTime = System.nanoTime();
 
-            startTime = System.nanoTime();
-
+            GK gk;
             if (num_parts == 1) { // streaming
-                // Create a KLL with given 
-                kll = org.apache.datasketches.kll.KllDoublesSketch.newHeapInstance(k);
+                // Create GKSketch with the given compression parameter
+                gk = new GK(3.0/(2*k)); // empirically a good choice of epsilon
                 for (int i = 0; i < data.size(); i++) {
-                    kll.update(data.get(i), 1);
+                    gk.feed(data.get(i));
                 }
-            } else {
+                gk.finalize();
+            }
+            else {
                 int partSize = n / num_parts; // somewhat assuming this will be integer (no remainder)
-                org.apache.datasketches.kll.KllDoublesSketch[] sketches = new org.apache.datasketches.kll.KllDoublesSketch[num_parts];
+                GK[] sketches = new GK[num_parts];
                 for (int j = 0; j < num_parts; j++) {
-                    sketches[j] = org.apache.datasketches.kll.KllDoublesSketch.newHeapInstance(k);
+                    sketches[j] = new GK(3.0/(2*k));
                 }
                 // create individual sketches
                 int j = 0;
                 for (int i = 0; i < n; i++) {
-                    sketches[j].update(data.get(i), 1);
+                    sketches[j].feed(data.get(i));
                     if (i % partSize == partSize - 1 && j < num_parts - 1) j++;
                 }
                 ////////////// measure time from here /////////////////
@@ -89,33 +88,37 @@ public class KLLProgram {
                         sketches[j+step] = null;
                     }
                 }
-                kll = sketches[0];
-
+                gk = sketches[0];
             }
-            assert kll.getN() == n;
+            long afterUpdatesTime = System.nanoTime();
 
+            List<Long> results = new ArrayList<>();
+            for (int i = 0; i < queries.size(); i++) {
+                results.add((gk.query_for_rank(queries.get(i))));
+            }
+            long afterQueriesTime = System.nanoTime();
+            int tuples = gk.num_entries_stored();
 
-            afterUpdatesTime = System.nanoTime();
-            double[] results = kll.getRanks(queries, org.apache.datasketches.quantilescommon.QuantileSearchCriteria.INCLUSIVE);
-            // for (int i = 0; i < queries.length; i++) {
-            //     results.add(kll.getRank(queries.get(i), org.apache.datasketches.quantilescommon.QuantileSearchCriteria.INCLUSIVE));
-            // }
-            afterQueriesTime = System.nanoTime();
+            // Print the size of the serialized sketch in bytes
+            System.out.printf("%d%n", tuples * 24); // three 64-bit numbers per tuple in GK
+            System.out.printf("%d%n", afterUpdatesTime - startTime);
+            System.out.printf("%d%n", afterQueriesTime - afterUpdatesTime);
             
             try (PrintWriter outputWriter = new PrintWriter(new FileWriter(outputFile))) {
-                for (int i = 0; i < results.length; i++) {
-                    outputWriter.printf("%d%n", (int)(results[i] * n));
+                if (results != null) {
+                    for (int i = 0; i < results.size(); i++) {
+                        outputWriter.printf("%d%n", results.get(i));
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            // Print the size of the serialized sketch in bytes
-            System.out.printf("%d%n", kll.getSerializedSizeBytes());
-            System.out.printf("%d%n", afterUpdatesTime - startTime);
-            System.out.printf("%d%n", afterQueriesTime - afterUpdatesTime);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.err.printf("GKSketchProgram exception %n" + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    
+
 }

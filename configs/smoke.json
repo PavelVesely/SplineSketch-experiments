@@ -1,0 +1,20 @@
+{
+  "n": 2000,
+  "queries": 100,
+  "merge_parts": 10,
+  "sizes": [25,100],
+  "moment_k": [7,15],
+  "kll_k": [8,24],
+  "synthetic": ["normal"],
+  "real": [],
+  "sketches": ["splinesketch","kll","moments","tdigest","gk"],
+  "update_ns": [2000,4000],
+  "query_counts": [50,100],
+  "seed": 42,
+  "jobs": 1,
+  "repeats": 1,
+  "java_heap": "1g",
+  "java_timeout": 120,
+  "real_limit": 2000,
+  "max_plot_bytes": 4500
+}

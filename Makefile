@@ -1,32 +1,56 @@
-.PHONY: all
+.PHONY: all setup doctor smoke reproduce plots paper test archive compile_SplineSketch compile_SplineSketchMG compile_SplineSketchAdjustable compile_tdigest compile_MS compile_KLL compile_GK compile_DDS
 
-SHELL=/usr/bin/env bash -eo pipefail
+SHELL := /bin/bash
+PYTHON ?= .venv/bin/python
+PROFILE ?= paper
+JAVAC ?= javac
 
 all: compile_SplineSketch compile_SplineSketchMG compile_SplineSketchAdjustable compile_tdigest compile_MS compile_KLL compile_GK compile_DDS
 
 compile_SplineSketch:
-	javac SplineSketchProgram.java SplineSketch.java
+	$(JAVAC) --release 17 -encoding UTF-8 java/splinesketch/SplineSketchProgram.java java/splinesketch/SplineSketch.java
 
 compile_SplineSketchMG:
-	javac SplineSketchMGProgram.java SplineSketchMG.java
-
-compile_SplineSketchLong:
-	javac SplineSketchLongProgram.java SplineSketchLong.java
+	$(JAVAC) --release 17 -encoding UTF-8 java/splinesketch/SplineSketchMGProgram.java java/splinesketch/SplineSketchMG.java
 
 compile_SplineSketchAdjustable:
-	javac SplineSketchAdjustableProgram.java SplineSketchAdjustable.java
+	$(JAVAC) --release 17 -encoding UTF-8 java/splinesketch/SplineSketchAdjustableProgram.java java/splinesketch/SplineSketchAdjustable.java
 
 compile_tdigest:
-	javac -cp .:t-digest-3.3.jar TDigestProgram.java
+	$(JAVAC) --release 17 -encoding UTF-8 -cp java/other_sketches:t-digest-3.3.jar java/other_sketches/TDigestProgram.java
 
 compile_MS:
-	javac -cp .:msolver-1.0-SNAPSHOT.jar:quantile-bench-1.0-SNAPSHOT.jar:commons-math3-3.6.1.jar MomentSketchProgram.java
+	$(JAVAC) --release 17 -encoding UTF-8 -cp java/other_sketches:msolver-1.0-SNAPSHOT.jar:quantile-bench-1.0-SNAPSHOT.jar:commons-math3-3.6.1.jar java/other_sketches/MomentSketchProgram.java
 
 compile_KLL:
-	javac -cp .:datasketches-java-6.0.0.jar:datasketches-memory-2.2.1.jar KLLProgram.java
+	$(JAVAC) --release 17 -encoding UTF-8 -cp java/other_sketches:datasketches-java-6.0.0.jar:datasketches-memory-2.2.1.jar java/other_sketches/KLLProgram.java
 
 compile_GK:
-	javac GKProgram.java GK.java
+	$(JAVAC) --release 17 -encoding UTF-8 java/other_sketches/GKProgram.java java/other_sketches/GK.java
 
 compile_DDS:
-	javac -cp .:sketches-java-0.8.3.jar DDSketchProgram.java 
+	$(JAVAC) --release 17 -encoding UTF-8 -cp java/other_sketches:sketches-java-0.8.3.jar java/other_sketches/DDSketchProgram.java
+
+setup:
+	python3 reproduce.py setup
+
+doctor:
+	$(PYTHON) reproduce.py doctor
+
+smoke:
+	$(PYTHON) reproduce.py run --profile smoke
+
+reproduce:
+	$(PYTHON) reproduce.py run --profile paper --download
+
+plots:
+	$(PYTHON) reproduce.py plot --output results/paper
+
+paper:
+	$(PYTHON) scripts/build_paper.py --profile $(PROFILE)
+
+test:
+	$(PYTHON) -m unittest discover -s tests -v
+
+archive:
+	$(PYTHON) scripts/package_artifact.py

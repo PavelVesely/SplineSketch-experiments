@@ -17,13 +17,9 @@ def compute_true_ranks(data, queries):
     Returns:
         list of float: A list of fractions, where each fraction is the proportion of items in the data that are less than or equal to the corresponding query.
     """
-    data_sorted = sorted(data)
-    ranks = []
-    for query in queries:
-        idx = bisect.bisect_right(data_sorted, query)
-        rank = idx
-        ranks.append(rank)
-    return ranks
+    data_sorted = np.sort(np.asarray(data, dtype=np.float64))
+    return np.searchsorted(data_sorted, queries, side="right").tolist()
+
 
 def calculate_aspect_ratio(data, k = 0):
     n = len(data)
@@ -56,23 +52,12 @@ def calculate_aspect_ratio(data, k = 0):
     return aspect_ratio
 
 def load_floats_from_file(file_path):
-    floats_list = []
-    try:
-        with open(file_path, 'r') as file:
-            for line in file:
-                # Convert the line to a float and append to the list
-                floats_list.append(float(line.strip()))
-    except FileNotFoundError:
-        print(f"The file {file_path} was not found.")
-    except ValueError:
-        print("There was an error converting a line to float.")
-    return floats_list
+    """Load values, propagating missing files and invalid input to the caller."""
+    with open(file_path) as stream:
+        return [float(line.strip()) for line in stream]
+
 
 def write_floats_to_file(floats_list, file_path):
-    try:
-        with open(file_path, 'w') as file:
-            for number in floats_list:
-                # Write each float to a new line in the file
-                file.write(f"{number}\n")
-    except IOError:
-        print(f"An error occurred while writing to the file {file_path}.")
+    with open(file_path, "w") as stream:
+        for number in floats_list:
+            stream.write(f"{number}\n")

@@ -22,6 +22,9 @@ public class SplineSketchMGProgram {
         String queryFile = args[1];
         int sketch_size = Integer.parseInt(args[2]);
         String outputFile = args[3];
+        if (args.length == 5 && Integer.parseInt(args[4]) != 1) {
+            throw new IllegalArgumentException("SplineSketch+MG merge is not implemented in this wrapper");
+        }
 
         try {
             ////////////// load data and queries /////////////////

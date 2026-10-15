@@ -1,3 +1,9 @@
+from pathlib import Path
+import sys
+
+# Support direct invocation as python scripts/test_merge.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import numpy as np
 import matplotlib.pyplot as plt
 import subprocess
@@ -9,7 +15,7 @@ from joblib import Parallel, delayed
 import random
 
 from IID_generators import *
-from run_experiments_IID import compute_true_ranks, one_experiment
+from helper_funcs import compute_true_ranks
 from spline_sketch_uniform import SplineSketchUniform
 
 NUM_PARALLEL_JOBS = 30 # number of jobs run in parallel

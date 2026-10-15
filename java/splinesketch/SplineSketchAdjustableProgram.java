@@ -22,7 +22,7 @@ public class SplineSketchAdjustableProgram {
         String queryFile = args[1];
         int sketch_size = Integer.parseInt(args[2]);
         String outputFile = args[3];
-        int num_parts = (args.length == 5) ? Integer.parseInt(args[4]) : 1; // streaming if it's 1, mergeability otherwise or merge
+        int num_parts = Integer.parseInt(args[4]); // streaming if it's 1, mergeability otherwise or merge
         int heuristicErrorType = Integer.parseInt(args[5]);
         int interpolationDegree = Integer.parseInt(args[6]);
         double splitJoinRatio = Double.parseDouble(args[7]);

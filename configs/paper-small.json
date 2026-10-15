@@ -1,0 +1,20 @@
+{
+  "n": 1000000,
+  "queries": 1000,
+  "merge_parts": 1000,
+  "sizes": [15,20,25,32,50,75,100,125,150,175,200,250],
+  "moment_k": [7,9,11,13,15,19,23,27,33,39,45,51],
+  "kll_k": [8,24,42,52,62,72,82,92,102,112,122,132],
+  "synthetic": ["normal","uniform","pareto","gumbel","lognormal","loguniform","signed_loguniform","signed_loguniform_extreme","normal_with_1_small_change","normal_with_1_large_change"],
+  "real": ["power"],
+  "sketches": ["splinesketch","kll","moments","tdigest","gk"],
+  "update_ns": [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],
+  "query_counts": [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],
+  "seed": 42,
+  "jobs": 1,
+  "repeats": 1,
+  "java_heap": "20g",
+  "java_timeout": 86400,
+  "real_limit": null,
+  "max_plot_bytes": 4500
+}
