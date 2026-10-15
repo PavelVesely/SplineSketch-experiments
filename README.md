@@ -5,6 +5,8 @@ Error Guarantees**, Aleksander Łukasiewicz, Jakub Tětek, and Pavel Veselý,
 PACMMOD 3(6), Article 362 (2025), presented at SIGMOD 2026.
 [Published paper](https://doi.org/10.1145/3769827).
 
+The main SplineSketch implementation (in Java) is in [java/splinesketch/SplineSketch.java](java/splinesketch/SplineSketch.java). A version with heavy-hitter filtering is in [java/splinesketch/SplineSketchMG.java](java/splinesketch/SplineSketchMG.java).
+
 The artifact builds the Java implementations, generates or downloads inputs,
 executes experiments, saves raw rank estimates and measurements, and produces
 the experimental figures in the published paper. Existing PDFs in `plots/` are
