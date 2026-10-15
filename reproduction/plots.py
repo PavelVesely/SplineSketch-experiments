@@ -102,8 +102,6 @@ def draw(ax, records, spec, limit):
         ax.plot(xx, 64 / xx, color="#9467bd", linestyle=(0, (1, 10)), label="error bound (64/bytes)")
     if zero_labels:
         ax.text(0.02, 0.02, "▼ = zero error", fontsize=8, transform=ax.transAxes)
-    if spec["suite"] == "merge":
-        ax.text(0.02, 0.97, "GKAdaptive merge unavailable", va="top", fontsize=8, transform=ax.transAxes)
     return dict(spec=spec, curves=list(curves), missing=False, zero_display_floor=floor if zero_labels else None)
 
 

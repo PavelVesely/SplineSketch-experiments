@@ -57,13 +57,12 @@ individual records for measurement times.
 
 ## Remaining validation limits
 
-- The 1264-measurement paper profile has been enumerated but **not executed in
+- The 1288-measurement paper profile has been enumerated but **not executed in
   full**. Its 100-million-item synthetic inputs, complete HEPMASS and
   800-million-item Books input require a suitably equipped machine.
 - HEPMASS's official training-file URL returns HTTP 200; full train/test
   acquisition and preprocessing have not been tested here. Books preprocessing
   has fixture coverage, but its full archive download/checksum has not been run.
-- GKAdaptive merge requires the author follow-up in the separate `TODO.md`.
 - Docker and native Windows were not available for validation. The native macOS
   path was exercised; container and Windows instructions remain unverified.
 - The MomentSketch snapshot JARs do not identify their original source commits.

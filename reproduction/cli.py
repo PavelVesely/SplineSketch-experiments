@@ -135,8 +135,7 @@ def run(args):
     if not tasks:
         raise ValueError("No measurements selected. Select matching suites/datasets, or enable real datasets in the profile.")
     if args.dry_run:
-        print(json.dumps(dict(config=cfg, measurements=len(tasks) * cfg["repeats"], tasks=tasks,
-            limitations=["GKAdaptive merge is unavailable; see TODO.md."]), indent=2))
+        print(json.dumps(dict(config=cfg, measurements=len(tasks) * cfg["repeats"], tasks=tasks), indent=2))
         return 0
     from .data import input_paths
     required = sorted({t["dataset"] for t in tasks if t["dataset"] in REAL})

@@ -68,7 +68,7 @@ def plan(cfg, suites, datasets=None, ablations=None):
         elif suite == "merge":
             names = ["normal"] + (["hepmass"] if "hepmass" in cfg["real"] or selected and "hepmass" in selected else [])
             add(suite, names, [cfg["n"]], [cfg["queries"]],
-                cfg["merge_parts"], sketches=[s for s in cfg["sketches"] if s not in ("gk", "splinesketch_mg")])
+                cfg["merge_parts"], sketches=[s for s in cfg["sketches"] if s != "splinesketch_mg"])
         elif suite in ("update", "query"):
             # Fixed-size timing baselines deliberately use k=15/8 for moments/KLL.
             before = len(tasks)

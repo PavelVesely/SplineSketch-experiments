@@ -245,8 +245,7 @@ than demanding identical timings on different CPUs:
 - Figures 6,7: initialization costs diminish on larger inputs; KLL and
   MomentSketch have fast updates, while MomentSketch rank queries are expensive.
 - Figure 8: merge errors increase relative to streaming but preserve much of the
-  comparative accuracy; SplineSketch merging is more expensive. GKAdaptive
-  curves require the author follow-up in `TODO.md`.
+  comparative accuracy; SplineSketch merging is more expensive.
 - Figure 9: MG filtering restores accuracy with frequent items once enough
   counters are available, with increased update cost. Preserve the documented
   Figure 9(a) workload discrepancy when comparing.

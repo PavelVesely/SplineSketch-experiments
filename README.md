@@ -98,10 +98,7 @@ profiles use the full selected real datasets; timing sweeps have their own
 input sizes. The `paper-medium` configuration is larger than `paper-small`;
 both are smaller than `paper`.
 
-All currently supported curves are automated. **GKAdaptive merge curves in
-Figure 8 remain unavailable** because the repository has no GK merge
-implementation. The author follow-up is isolated in [TODO.md](TODO.md); generated
-merge panels explicitly label the missing curve.
+All curves are automated.
 
 Download just the required inputs, or run a selected experiment:
 
@@ -198,7 +195,7 @@ amount of work in each measurement:
 | `real_limit` | Maximum number of valid values loaded from each real dataset, including HEPMASS merge input. A positive integer selects a prefix; `null` uses the full dataset. For Books the prefix is selected before seeded shuffling. This does not reduce download sizes. To clear a limit inherited from `smoke`, put `"real_limit": null` in your override JSON. |
 | `update_ns` | List of input lengths for the `update` suite on Normal data, producing update time versus stream length. For example, `[10000, 100000, 1000000]` gives three measurements per selected sketch and repeat. These lengths are independent of `n`. |
 | `query_counts` | List of requested query batch sizes for the `query` suite, producing time per query versus batch size on `n` Normal values. Keep counts at or below `n` to avoid multiple requested counts being capped to the same actual count. |
-| `merge_parts` | Number of consecutive chunks sketched separately and then merged in a binary tree in the `merge` suite. Use at least 2 and no more than the actual input length. More parts mean smaller chunks and more merges; time per merge divides the merge phase by `merge_parts - 1`. GKAdaptive and SplineSketch+MG merge comparisons are unavailable. |
+| `merge_parts` | Number of consecutive chunks sketched separately and then merged in a binary tree in the `merge` suite. Use at least 2 and no more than the actual input length. More parts mean smaller chunks and more merges; time per merge divides the merge phase by `merge_parts - 1`. SplineSketch+MG merge comparisons are unavailable. |
 
 The standard synthetic workloads are `normal`, `uniform`, `pareto`, `lognormal`,
 `loguniform`, `signed_loguniform`, `signed_loguniform_extreme`,
