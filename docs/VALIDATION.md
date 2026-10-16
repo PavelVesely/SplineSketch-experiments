@@ -1,10 +1,11 @@
 # Artifact validation
 
-Tested locally on Apple silicon macOS, Python 3.9.6,
-Temurin JDK 17.0.16+8, and the exact pinned dependencies in `requirements.txt`.
-Tested full suite on AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD (Debian).
+Tested on
+- Apple silicon macOS, Python 3.9.6, Temurin JDK 17.0.16+8, and the exact pinned dependencies in `requirements.txt`. 
 The JDK was downloaded to a temporary directory for validation; no system Java
 installation or global Python package environment was changed.
+- Full suite on Debian server, AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD, Python 3.13.
+
 
 ## Completed checks
 
