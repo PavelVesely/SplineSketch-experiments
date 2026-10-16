@@ -1,11 +1,10 @@
 # Artifact validation
 
-Tested on
-- Apple silicon macOS, Python 3.9.6, Temurin JDK 17.0.16+8, and the exact pinned dependencies in `requirements.txt`. 
+- A smoke run and profiles `paper-small` and `paper-medium` tested on Apple M4 macOS, Python 3.9.6, Temurin JDK 17.0.16+8, and the exact pinned dependencies in `requirements.txt`. 
 The JDK was downloaded to a temporary directory for validation; no system Java
 installation or global Python package environment was changed.
-- Full suite on Debian server, AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD, Python 3.13.
-
+- Full profile `paper` tested on Debian server, AMD EPYC 7302 (3 GHz) server with 251 GB RAM and SSD, Python 3.13.
+- A smoke run and `paper-small` profile tested on Win 11 (Intel Core i5-1035G4, 8GB RAM)
 
 ## Completed checks
 
