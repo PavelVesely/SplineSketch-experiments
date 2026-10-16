@@ -17,6 +17,8 @@ the generated figures.
 *A lot of content here is AI-generated from the 2025 version of this repository, but manually checked and tested by the author on MacOS 26.6.2 (Apple M4), a Debian server (AMD EPYC 7302 (3 GHz), 251 GB RAM), and Win 11 (Intel Core i5-1035G4, 8GB RAM).
 The thorough AI check revealed two discrepancies between the experimental pipeline and the paper's description (which was the author intention); these discrepancies are described in [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md), are preserved in the repository to facilitate reproducibility of the paper's content, and do not invalidate the central claims in the paper or the proposed algorithm's behavior or correctness.*
 
+*After running the full experimental setup of the paper (profile `paper`), the only significant difference to the results and plots in the published paper is that the GK algorithm got  faster (updates seem about 10-20 times faster compared to the evaluation for the paper).*
+
 ## Start with a smoke run
 
 Install **Java 17 or newer** (`java` and `javac` on PATH) and **Python 3.8 or newer**, then:
