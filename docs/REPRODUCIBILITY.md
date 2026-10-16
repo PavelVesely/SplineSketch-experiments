@@ -263,8 +263,7 @@ with the sequential default without recording that difference.
 
 Planning estimates: smoke <2 GB RAM and <100 MB cache/results; full suite
 approximately 128–256 GB RAM and 200 GB free disk, depending on text precision,
-archives and retained rank artifacts. Full-suite runtime and minimum resources
-have not been benchmarked here. `run.json` records measured RSS peaks (Python and
+archives and retained rank artifacts. `run.json` records measured RSS peaks (Python and
 largest child separately, not combined concurrent peak). Timing re-execution
 requires a new output path; plotting alone is cheap. Inputs are reused across
 suites and only one large dataset is prepared at a time.
